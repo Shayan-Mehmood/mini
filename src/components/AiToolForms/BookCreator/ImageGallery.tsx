@@ -240,7 +240,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({contentType,courseId,isEdito
                       //  }}
 
                        onError={(e) => {
-    console.error("Image failed to load:", generatedImage);
+    // console.error("Image failed to load:", generatedImage);
     setError("Failed to load generated image. Using proxy...");
     
     // Try with a proxy approach or direct URL
@@ -251,7 +251,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({contentType,courseId,isEdito
     
     // Try the direct URL approach
     if (!imgElement.src.includes('?direct=true')) {
-      imgElement.src = `${generatedImage}?direct=true`;
+      imgElement.src = `${image.url}?direct=true`;
     }
   }}
   referrerPolicy="no-referrer"

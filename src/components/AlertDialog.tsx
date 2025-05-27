@@ -71,25 +71,23 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
             <div className="my-4 border rounded-md p-2 bg-gray-50">
               <img
                 src={imageUrl}
-                alt="Preview"
+                alt={title || 'Preview'}
                 className="max-h-52 w-full mx-auto object-contain rounded"
- onError={(e) => {
-    console.error("Image failed to load:", generatedImage);
-    setError("Failed to load generated image. Using proxy...");
-    
-    // Try with a proxy approach or direct URL
-    const imgElement = e.target as HTMLImageElement;
-    // Add referrerPolicy and crossOrigin attributes
-    imgElement.referrerPolicy = "no-referrer";
-    imgElement.crossOrigin = "anonymous";
-    
-    // Try the direct URL approach
-    if (!imgElement.src.includes('?direct=true')) {
-      imgElement.src = `${generatedImage}?direct=true`;
-    }
-  }}
-  referrerPolicy="no-referrer"
-  crossOrigin="anonymous"                  
+                onError={(e) => {
+                  // Remove references to generatedImage and setError
+                  // Fallback: try to reload with ?direct=true if not already tried
+                  const imgElement = e.target as HTMLImageElement;
+                  imgElement.referrerPolicy = "no-referrer";
+                  imgElement.crossOrigin = "anonymous";
+                  if (!imgElement.src.includes('?direct=true')) {
+                    imgElement.src = `${imageUrl}?direct=true`;
+                  } else {
+                    // If still fails, fallback to placeholder
+                    imgElement.src = '/public/images/placeholder-image.jpg';
+                  }
+                }}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
               />
             </div>
           )}

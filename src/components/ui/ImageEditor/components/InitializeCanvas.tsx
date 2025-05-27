@@ -1,11 +1,11 @@
-import * as fabric from 'fabric';
+import { Canvas, Image as FabricImage } from 'fabric';
 import axios from 'axios';
 
 export const initializeCanvas = (
   canvasElement: HTMLCanvasElement,
   containerElement: HTMLDivElement
-): fabric.Canvas => {
-  const fabricCanvas = new fabric.Canvas(canvasElement, {
+): Canvas => {
+  const fabricCanvas = new Canvas(canvasElement, {
     preserveObjectStacking: true,
     selection: true,
     backgroundColor: '#ffffff',
@@ -29,7 +29,7 @@ export const initializeCanvas = (
 };
 
 export const loadImageToCanvas = async (
-  canvas: fabric.Canvas,
+  canvas: Canvas,
   imageUrl: string,
   setIsLoading: (loading: boolean) => void,
   setErrorMessage: (message: string | null) => void
@@ -38,39 +38,34 @@ export const loadImageToCanvas = async (
   setErrorMessage(null);
 
   try {
-    const img = new Image();
+    // Use window.Image for DOM image loading
+    const img = new window.Image();
     img.crossOrigin = 'anonymous';
-    
-    const imageLoaded = new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
+    const imageLoaded = new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
     });
-
     img.src = imageUrl;
     await imageLoaded;
-
-    const fabricImg = new fabric.Image(img);
+    // Use FabricImage for fabric canvas
+    const fabricImg = new FabricImage(img);
     handleSuccessfulImageLoad(canvas, fabricImg);
     setIsLoading(false);
   } catch (error) {
-    console.error('Error loading image:', error);
     setErrorMessage('Failed to load image. Please check the URL or try again.');
     setIsLoading(false);
   }
 };
 
-const handleSuccessfulImageLoad = (canvas: fabric.Canvas, img: fabric.Image) => {
+const handleSuccessfulImageLoad = (canvas: Canvas, img: FabricImage) => {
   canvas.clear();
-  
   const canvasWidth = canvas.getWidth();
   const canvasHeight = canvas.getHeight();
   const imgWidth = img.width || 0;
   const imgHeight = img.height || 0;
-  
   const scaleX = (canvasWidth * 0.9) / imgWidth;
   const scaleY = (canvasHeight * 0.9) / imgHeight;
   const scale = Math.min(scaleX, scaleY);
-  
   img.scale(scale);
   img.set({
     left: (canvasWidth - imgWidth * scale) / 2,
@@ -80,43 +75,37 @@ const handleSuccessfulImageLoad = (canvas: fabric.Canvas, img: fabric.Image) => 
     selectable: false,
     evented: false,
   });
-  
   canvas.add(img);
-  canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+  // Set as background image (Fabric.js v6+): assign and render
+  canvas.backgroundImage = img;
   canvas.renderAll();
 };
 
 export const compressImage = (dataUrl: string): Promise<string> => {
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.src = dataUrl;
-    
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
       const MAX_WIDTH = 1200;
       const MAX_HEIGHT = 1200;
-      
       let width = img.width;
       let height = img.height;
-      
       if (width > MAX_WIDTH) {
         height = (MAX_WIDTH / width) * height;
         width = MAX_WIDTH;
       }
-      
       if (height > MAX_HEIGHT) {
         width = (MAX_HEIGHT / height) * width;
         height = MAX_HEIGHT;
       }
-      
       canvas.width = width;
       canvas.height = height;
       ctx?.drawImage(img, 0, 0, width, height);
-      
       resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
+    img.onerror = () => resolve(dataUrl);
   });
 };
 
@@ -125,11 +114,9 @@ export const base64ToBlob = (base64: string): Blob => {
   const contentType = parts[0].split(':')[1] || 'image/jpeg';
   const raw = window.atob(parts[1]);
   const uInt8Array = new Uint8Array(raw.length);
-  
   for (let i = 0; i < raw.length; i++) {
     uInt8Array[i] = raw.charCodeAt(i);
   }
-  
   return new Blob([uInt8Array], { type: contentType });
 };
 
@@ -146,22 +133,18 @@ export const uploadToServer = async (
     const originalFilename = getFilenameFromUrl(originalUrl);
     const formData = new FormData();
     const blob = base64ToBlob(imageBase64);
-    
     formData.append('file', blob, originalFilename);
     formData.append('originalUrl', originalUrl);
     formData.append('override', 'true');
-    
     const response = await axios.post('/api/cloudflare/upload/override', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    
     if (response.data.success) {
       return response.data.data.url;
     } else {
       throw new Error(response.data.message || 'Upload failed');
     }
   } catch (error) {
-    console.error('Error uploading image:', error);
     throw error;
   }
 };

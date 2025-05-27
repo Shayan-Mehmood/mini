@@ -1,10 +1,10 @@
-import * as fabric from 'fabric';
+import { Canvas, Image as FabricImage, Rect, Circle, Triangle, IText, Object as FabricObject } from 'fabric';
 import axios from 'axios';
 
 export const initializeCanvas = (
   canvasElement: HTMLCanvasElement,
   containerElement: HTMLDivElement
-): fabric.Canvas => {
+): Canvas => {
   try {
     // Set initial dimensions from container
     const containerWidth = containerElement.clientWidth || 800;
@@ -22,7 +22,7 @@ export const initializeCanvas = (
     canvasElement.style.display = 'block';
     canvasElement.style.position = 'relative';
     
-    const fabricCanvas = new fabric.Canvas(canvasElement, {
+    const fabricCanvas = new Canvas(canvasElement, {
       preserveObjectStacking: true,
       selection: true,
       backgroundColor: '#ffffff',
@@ -83,14 +83,13 @@ export const initializeCanvas = (
 };
 
 export const loadImageToCanvas = async (
-  canvas: fabric.Canvas,
+  canvas: Canvas,
   imageUrl: string,
   setIsLoading: (loading: boolean) => void,
   setErrorMessage: (message: string | null) => void
 ): Promise<void> => {
   setIsLoading(true);
   setErrorMessage(null);
-
   try {
     console.log('🖼️ Loading image using multiple methods:', imageUrl);
     
@@ -103,34 +102,13 @@ export const loadImageToCanvas = async (
     
     console.log('📏 Canvas dimensions:', canvasWidth, 'x', canvasHeight);
     
-    // Try Method 1: fabric.Image.fromURL with error handling
+    // Try Method 1: Image.fromURL with Promise
     const loadWithFabricFromURL = (): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        console.log('🔄 Trying fabric.Image.fromURL...');
-        
-        fabric.Image.fromURL(
-          imageUrl,
-          (img) => {
-            try {
-              console.log('✅ fabric.Image.fromURL success');
-              processAndAddImage(canvas, img, canvasWidth, canvasHeight);
-              setIsLoading(false);
-              resolve();
-            } catch (error) {
-              console.error('❌ Error processing image from fabric.Image.fromURL:', error);
-              reject(error);
-            }
-          },
-          {
-            crossOrigin: 'anonymous'
-          }
-        );
-        
-        // Add timeout for fabric.Image.fromURL
-        setTimeout(() => {
-          reject(new Error('fabric.Image.fromURL timeout'));
-        }, 10000);
-      });
+      return FabricImage.fromURL(imageUrl, { crossOrigin: 'anonymous' })
+        .then((img: FabricImage) => {
+          processAndAddImage(canvas, img, canvas.getWidth(), canvas.getHeight());
+          setIsLoading(false);
+        });
     };
     
     // Try Method 2: Manual Image loading with CORS
@@ -138,15 +116,15 @@ export const loadImageToCanvas = async (
       return new Promise((resolve, reject) => {
         console.log('🔄 Trying manual image loading with CORS...');
         
-        const img = new Image();
+        const img = new window.Image();
         img.crossOrigin = 'anonymous';
         img.referrerPolicy = 'no-referrer';
         
         img.onload = () => {
           try {
             console.log('✅ Manual CORS loading success');
-            const fabricImg = new fabric.Image(img);
-            processAndAddImage(canvas, fabricImg, canvasWidth, canvasHeight);
+            const fabricImg = new FabricImage(img);
+            processAndAddImage(canvas, fabricImg, canvas.getWidth(), canvas.getHeight());
             setIsLoading(false);
             resolve();
           } catch (error) {
@@ -171,34 +149,11 @@ export const loadImageToCanvas = async (
     
     // Try Method 3: Proxy through our server
     const loadWithProxy = (): Promise<void> => {
-      return new Promise((resolve, reject) => {
-        console.log('🔄 Trying proxy loading...');
-        
-        // Create a proxy URL through your server
-        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
-        
-        fabric.Image.fromURL(
-          proxyUrl,
-          (img) => {
-            try {
-              console.log('✅ Proxy loading success');
-              processAndAddImage(canvas, img, canvasWidth, canvasHeight);
-              setIsLoading(false);
-              resolve();
-            } catch (error) {
-              console.error('❌ Error processing proxy loaded image:', error);
-              reject(error);
-            }
-          },
-          {
-            crossOrigin: 'anonymous'
-          }
-        );
-        
-        setTimeout(() => {
-          reject(new Error('Proxy loading timeout'));
-        }, 10000);
-      });
+      return FabricImage.fromURL(`/api/proxy-image?url=${encodeURIComponent(imageUrl)}`, { crossOrigin: 'anonymous' })
+        .then((img: FabricImage) => {
+          processAndAddImage(canvas, img, canvas.getWidth(), canvas.getHeight());
+          setIsLoading(false);
+        });
     };
     
     // Try methods in sequence
@@ -228,8 +183,8 @@ export const loadImageToCanvas = async (
 };
 
 const processAndAddImage = (
-  canvas: fabric.Canvas,
-  img: fabric.Image,
+  canvas: Canvas,
+  img: FabricImage,
   canvasWidth: number,
   canvasHeight: number
 ): void => {
@@ -291,10 +246,10 @@ const processAndAddImage = (
     });
     
     // Add the image to the canvas
-    canvas.add(img);
+    canvas.add(img as unknown as FabricObject);
     
     // Make it the active object
-    canvas.setActiveObject(img);
+    canvas.setActiveObject(img as unknown as FabricObject);
     
     // Re-render the canvas to display the image
     canvas.renderAll();
@@ -310,46 +265,36 @@ const processAndAddImage = (
 
 export const compressImage = (dataUrl: string): Promise<string> => {
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.src = dataUrl;
-    
     img.onload = (): void => {
       try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
         if (!ctx) {
           resolve(dataUrl);
           return;
         }
-        
         const MAX_WIDTH = 1200;
         const MAX_HEIGHT = 1200;
-        
         let width = img.width;
         let height = img.height;
-        
         if (width > MAX_WIDTH) {
           height = (MAX_WIDTH / width) * height;
           width = MAX_WIDTH;
         }
-        
         if (height > MAX_HEIGHT) {
           width = (MAX_HEIGHT / height) * width;
           height = MAX_HEIGHT;
         }
-        
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-        
         resolve(canvas.toDataURL('image/jpeg', 0.85));
       } catch (error) {
-        console.error('Error compressing image:', error);
         resolve(dataUrl);
       }
     };
-    
     img.onerror = () => resolve(dataUrl);
   });
 };
@@ -401,13 +346,15 @@ export const uploadToServer = async (
       timeout: 30000,
     });
     
-    if (response.data?.success) {
-      return response.data.data.url;
+    if (response.status === 200) {
+      console.log('✅ Upload successful:', response.data);
+      return response.data.url || response.data.key || '';
     } else {
-      throw new Error(response.data?.message || 'Upload failed');
+      console.error('❌ Upload failed with status:', response.status, response.statusText);
+      throw new Error('Upload failed');
     }
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('❌ Error in uploadToServer:', error);
     throw error;
   }
 };

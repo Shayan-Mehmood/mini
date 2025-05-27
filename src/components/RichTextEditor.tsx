@@ -27,11 +27,12 @@ interface RichTextEditorProps {
   onImageClick?: (imageUrl: string) => void;
 }
 
-// Improved cleanHtmlContent function that preserves image attributes during resize
+// --- Fix: Ensure images are not removed during resize ---
+// In cleanHtmlContent, always skip cleaning if isResizing is true
 const cleanHtmlContent = (htmlContent: string, isResizing: boolean = false): string => {
   if (!htmlContent) return htmlContent;
   
-  // Skip cleaning during resize operations to preserve image data
+  // Always skip cleaning during resize
   if (isResizing) {
     return htmlContent;
   }

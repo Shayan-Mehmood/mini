@@ -47,7 +47,7 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
           style={{ width: `${((value - min) / (max - min)) * 100}%` }}
         />
       </div>
-      <style jsx>{`
+      <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;

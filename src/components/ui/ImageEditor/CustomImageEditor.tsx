@@ -1,7 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
-import * as fabric from 'fabric';
 import { saveAs } from 'file-saver';
-
+import {
+  Canvas,
+  TEvent,
+  Object as FabricObject,
+  Image as FabricImage,
+  Rect,
+  Circle,
+  Triangle,
+  IText,
+  Point
+} from 'fabric';
 // Import smaller components
 import ToolsSidebar from './components/ToolsSidebar';
 import TopToolbar from './components/TopToolbar';
@@ -42,14 +51,14 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   
   // Core state
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [activeCategory, setActiveCategory] = useState<CategoryType>(CATEGORIES.SELECTION);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Tool state
   const [activeMode, setActiveMode] = useState<string>('select');
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   
   // Style properties
   const [color, setColor] = useState('#4f46e5');
@@ -124,7 +133,15 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       console.log('Canvas background color:', canvas.backgroundColor);
       
       // Log each object in detail with MORE properties
-      canvas.getObjects().forEach((obj, index) => {
+      canvas.getObjects().forEach((obj: any, index: any) => {
+        // Safely access properties and methods
+        let imgElement: HTMLImageElement | null = null;
+        if (typeof obj.getElement === 'function') {
+          const el = obj.getElement();
+          if (el instanceof HTMLImageElement) {
+            imgElement = el;
+          }
+        }
         console.log(`Object ${index} DETAILED:`, {
           type: obj.type,
           visible: obj.visible,
@@ -138,13 +155,10 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
           angle: obj.angle,
           flipX: obj.flipX,
           flipY: obj.flipY,
-          // For image objects, check the source
-          src: (obj as any).src || (obj as any)._element?.src || 'No src found',
-          _element: (obj as any)._element,
-          // Check if element is loaded
-          complete: (obj as any)._element?.complete,
-          naturalWidth: (obj as any)._element?.naturalWidth,
-          naturalHeight: (obj as any)._element?.naturalHeight,
+          src: (obj as any).src || imgElement?.src || 'No src found',
+          complete: imgElement?.complete,
+          naturalWidth: imgElement?.naturalWidth,
+          naturalHeight: imgElement?.naturalHeight,
           // Check CSS properties
           canvas: obj.canvas,
           group: obj.group,
@@ -155,7 +169,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
         });
 
         // If it's an image, try to force a refresh
-        if (obj.type === 'image') {
+        if (obj.type === 'image' && imgElement) {
           console.log('🖼️ Found image object, attempting to refresh...');
           try {
             // Force the object to re-render
@@ -163,39 +177,23 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
             obj.setCoords();
             canvas.renderAll();
             
-            // Check if the image element exists and is loaded
-            const imgElement = (obj as any)._element;
-            if (imgElement) {
-              console.log('📸 Image element details:', {
-                src: imgElement.src,
-                complete: imgElement.complete,
-                naturalWidth: imgElement.naturalWidth,
-                naturalHeight: imgElement.naturalHeight,
-                width: imgElement.width,
-                height: imgElement.height,
-                crossOrigin: imgElement.crossOrigin,
-                loading: imgElement.loading
-              });
-              
-              // If image is not complete, try to reload it
-              if (!imgElement.complete) {
-                console.log('🔄 Image not loaded, attempting to reload...');
-                const newImg = new Image();
-                newImg.crossOrigin = 'anonymous';
-                newImg.onload = () => {
-                  console.log('✅ Image reloaded successfully');
-                  (obj as any)._element = newImg;
+            // If image is not complete, try to reload it
+            if (!imgElement.complete) {
+              console.log('🔄 Image not loaded, attempting to reload...');
+              const newImg = new Image();
+              newImg.crossOrigin = 'anonymous';
+              newImg.onload = () => {
+                console.log('✅ Image reloaded successfully');
+                if (typeof obj.setElement === 'function') {
+                  obj.setElement(newImg);
                   canvas.renderAll();
-                };
-                newImg.onerror = (error) => {
-                  console.error('❌ Failed to reload image:', error);
-                };
-                newImg.src = imgElement.src;
-              }
-            } else {
-              console.log('❌ No image element found in fabric object');
+                }
+              };
+              newImg.onerror = (err) => {
+                console.error('❌ Failed to reload image:', err);
+              };
+              newImg.src = imgElement.src;
             }
-            
           } catch (error) {
             console.error('❌ Error while trying to refresh image:', error);
           }
@@ -203,17 +201,19 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       });
 
       // Check if background image exists and log its properties
-      if (canvas.backgroundImage) {
+      if (canvas.backgroundImage && canvas.backgroundImage instanceof FabricImage) {
+        const bgImg = canvas.backgroundImage as FabricImage;
+        const bgEl = bgImg.getElement?.();
         console.log('Background Image Details:', {
-          type: canvas.backgroundImage.type,
-          src: (canvas.backgroundImage as any).src || (canvas.backgroundImage as any)._element?.src,
-          width: canvas.backgroundImage.width,
-          height: canvas.backgroundImage.height,
-          scaleX: canvas.backgroundImage.scaleX,
-          scaleY: canvas.backgroundImage.scaleY,
-          visible: canvas.backgroundImage.visible,
-          opacity: canvas.backgroundImage.opacity,
-          object: canvas.backgroundImage
+          type: bgImg.type,
+          src: bgEl instanceof HTMLImageElement ? bgEl.src : '',
+          width: bgImg.width,
+          height: bgImg.height,
+          scaleX: bgImg.scaleX,
+          scaleY: bgImg.scaleY,
+          visible: bgImg.visible,
+          opacity: bgImg.opacity,
+          object: bgImg
         });
       }
 
@@ -261,7 +261,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     const forceCanvasRefresh = () => {
       console.log('🔄 Forcing canvas refresh...');
       try {
-        canvas.getObjects().forEach(obj => {
+        canvas.getObjects().forEach((obj:any) => {
           if (obj.type === 'image') {
             obj.set({ dirty: true });
             obj.setCoords();
@@ -285,22 +285,21 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     if (!canvas) return;
     
     try {
-      const handleSelection = (e: fabric.IEvent) => {
-        const target = e.selected?.[0] || null;
-        console.log('🎯 Object selected:', target);
-        setSelectedObject(target);
+      // --- Fix selection event handlers ---
+      const handleSelection = (options: { selected?: FabricObject[] }) => {
+        const selected = options.selected;
+        const target = selected && selected.length > 0 ? selected[0] : null;
+        setSelectedObject(target ?? null);
       };
-      
       const handleSelectionCleared = () => {
-        console.log('🔄 Selection cleared');
         setSelectedObject(null);
       };
 
-      const handleObjectAdded = (e: fabric.IEvent) => {
+      const handleObjectAdded = (e: any) => {
         console.log('➕ Object added to canvas:', e.target);
       };
 
-      const handleObjectRemoved = (e: fabric.IEvent) => {
+      const handleObjectRemoved = (e: any) => {
         console.log('➖ Object removed from canvas:', e.target);
       };
 
@@ -317,21 +316,15 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       canvas.on('selection:cleared', handleSelectionCleared);
       canvas.on('object:added', handleObjectAdded);
       canvas.on('object:removed', handleObjectRemoved);
-      canvas.on('canvas:cleared', handleCanvasCleared);
       canvas.on('after:render', handleAfterRender);
       
       return () => {
-        try {
-          canvas.off('selection:created', handleSelection);
-          canvas.off('selection:updated', handleSelection);
-          canvas.off('selection:cleared', handleSelectionCleared);
-          canvas.off('object:added', handleObjectAdded);
-          canvas.off('object:removed', handleObjectRemoved);
-          canvas.off('canvas:cleared', handleCanvasCleared);
-          canvas.off('after:render', handleAfterRender);
-        } catch (error) {
-          console.error('Error removing canvas event listeners:', error);
-        }
+        canvas.off('selection:created', handleSelection);
+        canvas.off('selection:updated', handleSelection);
+        canvas.off('selection:cleared', handleSelectionCleared);
+        canvas.off('object:added', handleObjectAdded);
+        canvas.off('object:removed', handleObjectRemoved);
+        canvas.off('after:render', handleAfterRender);
       };
     } catch (error) {
       console.error('Error setting up canvas event listeners:', error);
@@ -366,7 +359,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     if (!canvas) return;
     
     console.log('📝 Adding text to canvas');
-    const text = new fabric.IText('Double click to edit', {
+    const text = new IText('Double click to edit', {
       left: 50,
       top: 50,
       fontFamily: 'Arial',
@@ -380,15 +373,13 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     console.log('✅ Text added:', text);
   };
 
+  // --- Fix shape creation and add/setActiveObject ---
   const handleAddShape = (shape: string): void => {
     if (!canvas) return;
-    
-    console.log('🔸 Adding shape to canvas:', shape);
-    let fabricObject: fabric.Object;
-    
+    let fabricObject: FabricObject;
     switch (shape) {
       case 'rectangle':
-        fabricObject = new fabric.Rect({
+        fabricObject = new Rect({
           left: 50,
           top: 50,
           width: 100,
@@ -396,20 +387,20 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
           fill: 'transparent',
           stroke: color,
           strokeWidth: strokeWidth
-        });
+        }) as unknown as FabricObject;
         break;
       case 'circle':
-        fabricObject = new fabric.Circle({
+        fabricObject = new Circle({
           left: 50,
           top: 50,
           radius: 50,
           fill: 'transparent',
           stroke: color,
           strokeWidth: strokeWidth
-        });
+        }) as unknown as FabricObject;
         break;
       case 'triangle':
-        fabricObject = new fabric.Triangle({
+        fabricObject = new Triangle({
           left: 50,
           top: 50,
           width: 100,
@@ -417,16 +408,22 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
           fill: 'transparent',
           stroke: color,
           strokeWidth: strokeWidth
-        });
+        }) as unknown as FabricObject;
         break;
       default:
-        return;
+        fabricObject = new Rect({
+          left: 50,
+          top: 50,
+          width: 100,
+          height: 100,
+          fill: 'transparent',
+          stroke: color,
+          strokeWidth: strokeWidth
+        }) as unknown as FabricObject;
     }
-    
     canvas.add(fabricObject);
     canvas.setActiveObject(fabricObject);
     canvas.renderAll();
-    console.log('✅ Shape added:', fabricObject);
   };
 
   const handleDeleteSelected = (): void => {
@@ -447,7 +444,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     const canvasWidth = canvas.getWidth();
     const canvasHeight = canvas.getHeight();
     
-    const rect = new fabric.Rect({
+    const rect = new Rect({
       left: canvasWidth * 0.2,
       top: canvasHeight * 0.2,
       width: canvasWidth * 0.6,
@@ -469,37 +466,25 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     setActiveTool('crop-confirm');
   };
 
+  // --- Fix cropRect type assertion ---
   const handleConfirmCrop = (): void => {
     if (!canvas) return;
-    
-    console.log('✅ Confirming crop operation');
-    const cropRect = canvas.getActiveObject() as fabric.Rect;
-    if (!cropRect || !cropRect.left || !cropRect.top) return;
-    
+    const cropRect = canvas.getActiveObject();
+    if (!cropRect || typeof cropRect.left !== 'number' || typeof cropRect.top !== 'number') return;
     const left = cropRect.left;
     const top = cropRect.top;
     const width = cropRect.getScaledWidth();
     const height = cropRect.getScaledHeight();
-    
-    const dataUrl = canvas.toDataURL({
-      left,
-      top,
-      width,
-      height,
-      format: 'png'
-    });
-    
-    const img = new Image();
+    const dataUrl = canvas.toDataURL({ left, top, width, height, format: 'png', multiplier: 1 });
+    const img = new window.Image();
     img.onload = (): void => {
       canvas.clear();
-      
-      fabric.Image.fromURL(dataUrl, (img: fabric.Image) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-        canvas.renderAll();
-        console.log('✅ Crop applied, new background image set');
-      });
+      FabricImage.fromURL(dataUrl, { crossOrigin: 'anonymous' })
+        .then((fabricImage: FabricImage) => {
+          canvas.backgroundImage = fabricImage;
+          canvas.renderAll();
+        });
     };
-    
     img.src = dataUrl;
     setActiveTool(null);
   };
@@ -509,6 +494,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     
     console.log('🔄 Rotating canvas:', direction);
     const angle = direction === 'left' ? -90 : 90;
+    
     const dataUrl = canvas.toDataURL();
     const img = new Image();
     
@@ -533,11 +519,12 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       
       canvas.clear();
       
-      fabric.Image.fromURL(tempCanvas.toDataURL(), (img: fabric.Image) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-        canvas.renderAll();
-        console.log('✅ Rotation applied');
-      });
+      FabricImage.fromURL(tempCanvas.toDataURL(), { crossOrigin: 'anonymous' })
+        .then((fabricImage: FabricImage) => {
+          canvas.backgroundImage = fabricImage;
+          canvas.renderAll();
+          console.log('✅ Rotation applied');
+        });
     };
     
     img.src = dataUrl;
@@ -571,11 +558,12 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       
       canvas.clear();
       
-      fabric.Image.fromURL(tempCanvas.toDataURL(), (img: fabric.Image) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-        canvas.renderAll();
-        console.log('✅ Flip applied');
-      });
+      FabricImage.fromURL(tempCanvas.toDataURL(), { crossOrigin: 'anonymous' })
+        .then((fabricImage: FabricImage) => {
+          canvas.backgroundImage = fabricImage;
+          canvas.renderAll();
+          console.log('✅ Flip applied');
+        });
     };
     
     img.src = dataUrl;
@@ -601,11 +589,13 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       
       canvas.clear();
       
-      fabric.Image.fromURL(tempCanvas.toDataURL(), (img: fabric.Image) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-        canvas.renderAll();
-        console.log('✅ Filters applied');
-      });
+      // FIX: Use setBackgroundImage instead of backgroundImage
+      FabricImage.fromURL(tempCanvas.toDataURL(), { crossOrigin: 'anonymous' })
+        .then((fabricImage: FabricImage) => {
+          canvas.backgroundImage = fabricImage;
+          canvas.renderAll();
+          console.log('✅ Filters applied');
+        });
       
       setBrightness(0);
       setContrast(0);
@@ -627,7 +617,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     if (!canvas) return;
     console.log('🔍 Zooming to:', newZoom + '%');
     const center = canvas.getCenter();
-    canvas.zoomToPoint(new fabric.Point(center.left, center.top), newZoom / 100);
+    canvas.zoomToPoint(new Point(center.left, center.top), newZoom / 100);
     setZoomLevel(newZoom);
     canvas.renderAll();
   };
@@ -641,7 +631,12 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
       canvas.discardActiveObject();
       canvas.renderAll();
       
-      const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9 });
+      const dataUrl = canvas.toDataURL({ 
+        format: 'jpeg', 
+        quality: 0.9,
+        multiplier: 1
+      });
+      
       console.log('📷 Canvas data URL generated');
       const compressedDataUrl = await compressImage(dataUrl);
       const newImageUrl = await uploadToServer(compressedDataUrl, initialImageUrl);
@@ -664,7 +659,12 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
     canvas.discardActiveObject();
     canvas.renderAll();
     
-    const dataUrl = canvas.toDataURL({ format: 'jpeg', quality: 0.9 });
+    const dataUrl = canvas.toDataURL({ 
+      format: 'jpeg', 
+      quality: 0.9,
+      multiplier: 1
+    });
+    
     const blob = base64ToBlob(dataUrl);
     saveAs(blob, 'edited-image.jpg');
     console.log('✅ Download completed');
@@ -775,7 +775,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
           onZoom={handleZoom}
           onDownload={handleDownload}
           onSave={handleSave}
-          onCancel={() => { void onSave(initialImageUrl); }}
+          onCancel={() => { onSave(initialImageUrl); }}
           isLoading={isLoading}
           isSaving={isSaving}
           hasError={!!errorMessage}
@@ -793,7 +793,7 @@ const CustomImageEditor: React.FC<CustomImageEditorProps> = ({
           <ErrorOverlay
             isVisible={!!errorMessage}
             message={errorMessage}
-            onClose={() => { void onSave(initialImageUrl); }}
+            onClose={() => { onSave(initialImageUrl); }}
           />
         )}
       </div>
