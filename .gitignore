@@ -1,0 +1,21 @@
+./node_modules/
+# Ignore build output
+/dist/
+# Ignore logs
+/logs
+# Ignore environment variables
+/.env
+# Ignore coverage reports
+/coverage/
+# Ignore temporary files
+/tmp/
+# Ignore IDE specific files
+/.vscode/
+# Ignore OS generated files
+.DS_Store
+# ignore node_modules
+/node_modules/
+# Ignore build artifacts
+/build/
+
+

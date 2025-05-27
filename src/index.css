@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.ql-snow .ql-color-picker .ql-picker-label svg {
+    height:100%;
+}
+
+.ql-toolbar .ql-formats .ql-align .ql-picker-label svg{
+    height: 100%;
+}
+  
+span[data-tooltip="Text Color"] svg {
+margin-left:-0.5rem;
+}
+
+.overflow-wrap{
+    overflow-wrap: anywhere;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
