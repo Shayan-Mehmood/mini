@@ -3,13 +3,14 @@ import { Minus, Plus, Download, Check } from 'lucide-react';
 
 interface TopToolbarProps {
   zoomLevel: number;
-  onZoom: (zoom: number) => void;
+  onZoom: (level: number) => void;
   onDownload: () => void;
   onSave: () => void;
   onCancel: () => void;
   isLoading: boolean;
   isSaving: boolean;
   hasError: boolean;
+  isCoverEdit?: boolean;  // Add this prop
 }
 
 const TopToolbar: React.FC<TopToolbarProps> = ({
@@ -20,7 +21,9 @@ const TopToolbar: React.FC<TopToolbarProps> = ({
   onCancel,
   isLoading,
   isSaving,
-  hasError
+  hasError,
+  isCoverEdit = false
+
 }) => {
   return (
     <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white shadow-sm">
@@ -79,23 +82,25 @@ const TopToolbar: React.FC<TopToolbarProps> = ({
         </button>
         
         <button
-          onClick={onSave}
-          className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-sm flex items-center transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isLoading || isSaving || hasError}
-          title="Apply changes"
-        >
-          {isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-              <span className="font-medium">Saving...</span>
-            </>
-          ) : (
-            <>
-              <Check size={16} className="mr-2" />
-              <span className="font-medium">Apply Changes</span>
-            </>
-          )}
-        </button>
+    onClick={onSave}
+    className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-sm flex items-center transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={isLoading || isSaving || hasError}
+    title="Apply changes"
+  >
+    {isSaving ? (
+      <>
+        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+        <span className="font-medium">Saving...</span>
+      </>
+    ) : (
+      <>
+        <Check size={16} className="mr-2" />
+        <span className="font-medium">
+          {isCoverEdit ? "Update Cover" : "Apply Changes"}
+        </span>
+      </>
+    )}
+  </button>
       </div>
     </div>
   );

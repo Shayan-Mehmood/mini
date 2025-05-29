@@ -2,11 +2,11 @@ import * as fabric from 'fabric';
 
 export const CATEGORIES = {
   SELECTION: 'selection',
-  DRAWING: 'drawing',
+  // DRAWING: 'drawing',
   SHAPES: 'shapes',
   TEXT: 'text',
   TRANSFORM: 'transform',
-  FILTERS: 'filters'
+  // FILTERS: 'filters'
 } as const;
 
 export type CategoryType = typeof CATEGORIES[keyof typeof CATEGORIES];

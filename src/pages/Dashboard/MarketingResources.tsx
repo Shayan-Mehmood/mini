@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
 import BackButton from '../../components/ui/BackButton';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 
 const MarketingResources: React.FC = () => {
   // Change state to track a single active section instead of multiple open sections
@@ -147,12 +149,12 @@ const MarketingResources: React.FC = () => {
       { id: 1, title: 'YouTube Authority', slides: '/images/marketing/youtube-slides.jpg' }
     ],
     caseStudies: [
-      { id: 1, title: 'Emma\'s Health and Fitness', urls:'https://minilessonsacademy.com/case-study-1-empowering-a-health-fitness-coach-to-scale-her-business-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Emma.png' },
-      { id: 2, title: 'Daniel\'s Business Consultancy', urls:'https://minilessonsacademy.com/case-study-2-how-a-business-consultant-expanded-his-reach-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Daniel.png' },
-      { id: 3, title: 'Samantha\'s Teaching', urls:'https://minilessonsacademy.com/case-study-3-a-teacher-transforms-education-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Samantha.png' },
-      { id: 4, title: 'Liam\'s Spiritual Workshops', urls:'https://minilessonsacademy.com/case-study-4-transforming-passion-into-purpose-a-spiritual-guides-journey-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Liam.png' },
-      { id: 5, title: 'Michelle\'s Doctoral Research', urls:'https://minilessonsacademy.com/case-study-5-overcoming-burnout-how-a-psychologist-reignited-her-passion-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Dr-Michelle.png' },
-      { id: 6, title: 'Startup Kickstarting', urls:'https://minilessonsacademy.com/case-study-6-how-a-tech-startup-enhanced-customer-education-with-mini-lessons-academy/',image: 'https://files.minilessonsacademy.com/marketing/case-studies/Elevate-Solutions-e1731609374373-768x765.png' },
+      { id: 1, title: 'Emma\'s Health and Fitness', urls:'https://minilessonsacademy.com/case-study-1-empowering-a-health-fitness-coach-to-scale-her-business-with-mini-lessons-academy/',image: 'https://minilessonsacademy.com/wp-content/uploads/2024/11/2149627073-1.jpg' },
+      { id: 2, title: 'Daniel\'s Business Consultancy', urls:'https://minilessonsacademy.com/case-study-2-how-a-business-consultant-expanded-his-reach-with-mini-lessons-academy/',image: '	https://minilessonsacademy.com/wp-content/uploads/2024/11/25060.webp' },
+      { id: 3, title: 'Samantha\'s Teaching', urls:'https://minilessonsacademy.com/case-study-3-a-teacher-transforms-education-with-mini-lessons-academy/',image: 'https://minilessonsacademy.com/wp-content/uploads/2024/11/classroom-hero-image-scaled.jpg' },
+      { id: 4, title: 'Liam\'s Spiritual Workshops', urls:'https://minilessonsacademy.com/case-study-4-transforming-passion-into-purpose-a-spiritual-guides-journey-with-mini-lessons-academy/',image: 'https://minilessonsacademy.com/wp-content/uploads/2024/11/2149038763.webp' },
+      { id: 5, title: 'Michelle\'s Doctoral Research', urls:'https://minilessonsacademy.com/case-study-5-overcoming-burnout-how-a-psychologist-reignited-her-passion-with-mini-lessons-academy/',image: 'https://minilessonsacademy.com/wp-content/uploads/2024/11/41805.webp' },
+      { id: 6, title: 'Startup Kickstarting', urls:'https://minilessonsacademy.com/case-study-6-how-a-tech-startup-enhanced-customer-education-with-mini-lessons-academy/',image: 'https://minilessonsacademy.com/wp-content/uploads/2024/11/2149241213.webp' },
     ],
   };
 
@@ -167,13 +169,8 @@ const MarketingResources: React.FC = () => {
     }
   };
 
-  // Add state for carousel
-  const [currentSlide, setCurrentSlide] = useState<Record<number, number>>({});
-  const carouselRefs = useRef<Record<number, HTMLDivElement | null>>({});
-
   // Add state for video playback
   const [playingVideo, setPlayingVideo] = useState<{categoryId: number, videoId: number} | null>(null);
-  const [isPaused, setIsPaused] = useState<Record<number, boolean>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   // Render resource cards for different types
@@ -230,278 +227,187 @@ const MarketingResources: React.FC = () => {
   };
 
   const renderVideos = () => {
-    // Calculate videos per slide based on screen size
-    const getVideosPerSlide = () => {
-      if (typeof window !== 'undefined') {
-        if (window.innerWidth >= 1024) return 4; // lg
-        if (window.innerWidth >= 768) return 3; // md
-        if (window.innerWidth >= 640) return 2; // sm
-        return 1; // xs
-      }
-      return 4; // Default for SSR
-    };
+    // Video Carousel Component using Embla
+    const VideoCarousel: React.FC<{ category: any }> = ({ category }) => {
+      const autoplayPlugin = useRef(
+        Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
+      );
+      
+      const [emblaRef, emblaApi] = useEmblaCarousel(
+        { 
+          loop: true,
+          align: 'start',
+          slidesToScroll: 1,
+          breakpoints: {
+            '(min-width: 640px)': { slidesToScroll: 2 },
+            '(min-width: 768px)': { slidesToScroll: 3 },
+            '(min-width: 1024px)': { slidesToScroll: 4 }
+          }
+        },
+        [autoplayPlugin.current]
+      );
 
-    const videosPerSlide = getVideosPerSlide();
+      const [selectedIndex, setSelectedIndex] = useState(0);
+      const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+      const [canScrollPrev, setCanScrollPrev] = useState(false);
+      const [canScrollNext, setCanScrollNext] = useState(false);
 
-    const nextSlide = (categoryId: number) => {
-      // Don't advance if paused or a video is playing in this category
-      if (isPaused[categoryId] || (playingVideo && playingVideo.categoryId === categoryId)) {
-        return;
-      }
-      
-      const category = resources.videos.find(c => c.id === categoryId);
-      if (!category) return;
-      
-      const totalVideos = category.videos.length;
-      const totalSlides = Math.ceil(totalVideos / videosPerSlide);
-      
-      setCurrentSlide(prev => ({
-        ...prev,
-        [categoryId]: ((prev[categoryId] || 0) + 1) % totalSlides
-      }));
-      
-      // Scroll to the next set of videos
-      if (carouselRefs.current[categoryId]) {
-        const scrollAmount = carouselRefs.current[categoryId]!.clientWidth;
-        carouselRefs.current[categoryId]!.scrollTo({
-          left: ((currentSlide[categoryId] || 0) + 1) * scrollAmount,
-          behavior: 'smooth'
-        });
-      }
-    };
+      const scrollPrev = useCallback(() => {
+        if (emblaApi) emblaApi.scrollPrev();
+      }, [emblaApi]);
 
-    const prevSlide = (categoryId: number) => {
-      // Don't move if paused or a video is playing in this category
-      if (isPaused[categoryId] || (playingVideo && playingVideo.categoryId === categoryId)) {
-        return;
-      }
-      
-      const category = resources.videos.find(c => c.id === categoryId);
-      if (!category) return;
-      
-      const totalVideos = category.videos.length;
-      const totalSlides = Math.ceil(totalVideos / videosPerSlide);
-      
-      setCurrentSlide(prev => ({
-        ...prev,
-        [categoryId]: ((prev[categoryId] || 0) - 1 + totalSlides) % totalSlides
-      }));
-      
-      // Scroll to the previous set of videos
-      if (carouselRefs.current[categoryId]) {
-        const scrollAmount = carouselRefs.current[categoryId]!.clientWidth;
-        carouselRefs.current[categoryId]!.scrollTo({
-          left: ((currentSlide[categoryId] || 0) - 1 + totalSlides) % totalSlides * scrollAmount,
-          behavior: 'smooth'
-        });
-      }
-    };
+      const scrollNext = useCallback(() => {
+        if (emblaApi) emblaApi.scrollNext();
+      }, [emblaApi]);
 
-    // Update the useEffect for auto-scroll to respect paused state
-    useEffect(() => {
-      const intervals: NodeJS.Timeout[] = [];
-      
-      resources.videos.forEach(category => {
-        // Only set interval if this category's carousel is not paused
-        if (!isPaused[category.id]) {
-          const interval = setInterval(() => {
-            nextSlide(category.id);
-          }, 5000); // Change slide every 5 seconds
-          
-          intervals.push(interval);
-        }
-      });
-      
-      return () => {
-        intervals.forEach(interval => clearInterval(interval));
+      const scrollTo = useCallback((index: number) => {
+        if (emblaApi) emblaApi.scrollTo(index);
+      }, [emblaApi]);
+
+      const onInit = useCallback((emblaApi: any) => {
+        setScrollSnaps(emblaApi.scrollSnapList());
+      }, []);
+
+      const onSelect = useCallback((emblaApi: any) => {
+        setSelectedIndex(emblaApi.selectedScrollSnap());
+        setCanScrollPrev(emblaApi.canScrollPrev());
+        setCanScrollNext(emblaApi.canScrollNext());
+      }, []);
+
+      useEffect(() => {
+        if (!emblaApi) return;
+
+        onInit(emblaApi);
+        onSelect(emblaApi);
+        emblaApi.on('reInit', onInit);
+        emblaApi.on('select', onSelect);
+      }, [emblaApi, onInit, onSelect]);
+
+      // Handle video interactions
+      const handleVideoPlay = (videoId: number) => {
+        setPlayingVideo({ categoryId: category.id, videoId });
+        autoplayPlugin.current.stop();
       };
-    }, [currentSlide, isPaused]);
 
-    // Add function to pause carousel when interacting
-    const pauseCarousel = (categoryId: number) => {
-      setIsPaused(prev => ({
-        ...prev,
-        [categoryId]: true
-      }));
-    };
+      const handleVideoPause = () => {
+        setPlayingVideo(null);
+      };
 
-    // Add function to resume carousel
-    const resumeCarousel = (categoryId: number) => {
-      setIsPaused(prev => ({
-        ...prev,
-        [categoryId]: false
-      }));
-    };
+      const handleVideoEnd = () => {
+        setPlayingVideo(null);
+        setTimeout(() => {
+          autoplayPlugin.current.play();
+        }, 1000);
+      };
 
-    // Handle video play/pause
-    const handleVideoPlay = (categoryId: number, videoId: number) => {
-      setPlayingVideo({ categoryId, videoId });
-      pauseCarousel(categoryId);
-    };
+      return (
+        <div className="relative">
+          {/* Carousel Container */}
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {category.videos.map((video: any, index: number) => (
+                <div 
+                  key={video.id} 
+                  className="flex-[0_0_100%] sm:flex-[0_0_50%] md:flex-[0_0_33.333%] lg:flex-[0_0_25%] pl-4"
+                >
+                  <div className="bg-gray-100 rounded-lg overflow-hidden transform transition-all duration-300 hover:scale-[1.03] hover:shadow-lg">
+                    <div className="relative h-32 sm:h-40 bg-gray-200">
+                      {/* Video element */}
+                      <video
+                        ref={ref => videoRefs.current[`${category.id}-${video.id}`] = ref}
+                        src={video.thumbnail}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        preload="metadata"
+                        poster=""
+                        playsInline
+                        muted
+                        onLoadedMetadata={(e) => {
+                          const videoEl = e.currentTarget;
+                          videoEl.currentTime = 0;
+                        }}
+                        controls={playingVideo?.categoryId === category.id && playingVideo?.videoId === video.id}
+                        onPlay={() => handleVideoPlay(video.id)}
+                        onPause={handleVideoPause}
+                        onEnded={handleVideoEnd}
+                      />
+                      
+                      {/* Play button overlay */}
+                      {(!playingVideo || playingVideo.categoryId !== category.id || playingVideo.videoId !== video.id) && (
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer group/play"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const videoEl = videoRefs.current[`${category.id}-${video.id}`];
+                            if (videoEl) {
+                              videoEl.controls = true;
+                              videoEl.muted = false;
+                              const playPromise = videoEl.play();
+                              
+                              if (playPromise !== undefined) {
+                                playPromise
+                                  .then(() => {
+                                    handleVideoPlay(video.id);
+                                  })
+                                  .catch(error => {
+                                    console.error("Video play error:", error);
+                                    videoEl.controls = true;
+                                  });
+                              }
+                            }
+                          }}
+                        >
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-600 rounded-full flex items-center justify-center transform transition-all duration-200 group-hover/play:scale-110 group-hover/play:bg-purple-700 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-7 sm:w-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Video title overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/70 to-transparent p-3">
+                        <p className="text-xs sm:text-sm text-white font-medium line-clamp-2">{video.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-    const handleVideoPause = (categoryId: number) => {
-      setPlayingVideo(null);
-      // Optional: auto-resume carousel after video stops
-      // resumeCarousel(categoryId);
-    };
+          {/* Navigation Buttons */}
+          
 
-    const handleVideoEnd = (categoryId: number) => {
-      setPlayingVideo(null);
-      resumeCarousel(categoryId);
+          {/* Dots Navigation */}
+          {scrollSnaps.length > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              {scrollSnaps.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === selectedIndex 
+                      ? 'bg-blue-600 w-6' 
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  onClick={() => scrollTo(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
     };
 
     return (
       <div className="space-y-8">
-        {resources.videos.map(category => {
-          const totalVideos = category.videos.length;
-          const totalSlides = Math.ceil(totalVideos / videosPerSlide);
-          
-          return (
-            <div key={category.id} className="space-y-4">
-              <h3 className="text-lg font-medium text-blue-600">{category.title}</h3>
-              
-              <div 
-                className="relative group"
-                onMouseEnter={() => pauseCarousel(category.id)}
-                onMouseLeave={() => resumeCarousel(category.id)}
-                onTouchStart={() => pauseCarousel(category.id)}
-              >
-                {/* Carousel navigation buttons */}
-                {/* <button 
-                  onClick={() => prevSlide(category.id)} 
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-r-md p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Previous videos"
-                >
-                  <ChevronLeft size={20} />
-                </button> */}
-                
-                {/* <button 
-                  onClick={() => nextSlide(category.id)} 
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-l-md p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Next videos"
-                >
-                  <ChevronRight size={20} />
-                </button> */}
-                
-                {/* Carousel container */}
-                <div 
-                  ref={ref => carouselRefs.current[category.id] = ref} 
-                  className="overflow-x-hidden scroll-smooth"
-                >
-                  <div 
-                    className="flex transition-transform duration-300 ease-in-out"
-                    style={{ 
-                      width: `${totalSlides * 100}%`,
-                      transform: `translateX(-${(currentSlide[category.id] || 0) * (100 / totalSlides)}%)`
-                    }}
-                  >
-                    {/* Create slides */}
-                    {Array.from({ length: totalSlides }).map((_, slideIndex) => (
-                      <div 
-                        key={slideIndex} 
-                        className="flex-shrink-0"
-                        style={{ width: `${100 / totalSlides}%` }}
-                      >
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 px-1">
-                          {category.videos
-                            .slice(slideIndex * videosPerSlide, (slideIndex + 1) * videosPerSlide)
-                            .map(video => (
-                              <div key={video.id} className="bg-gray-100 rounded-lg overflow-hidden transform transition-transform hover:scale-[1.03]">
-                                <div className="relative h-32 sm:h-40 bg-gray-200">
-                                  {/* Video element */}
-                                  <video
-                                    ref={ref => videoRefs.current[`${category.id}-${video.id}`] = ref}
-                                    src={video.thumbnail}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                    preload="metadata"
-                                    poster=""
-                                    playsInline
-                                    onLoadedMetadata={(e) => {
-                                      // Set current time to 0 to ensure first frame is shown
-                                      const videoEl = e.currentTarget;
-                                      videoEl.currentTime = 0;
-                                    }}
-                                    controls={playingVideo?.categoryId === category.id && playingVideo?.videoId === video.id}
-                                    onEnded={() => handleVideoEnd(category.id)}
-                                  />
-                                  
-                                  {/* Play button overlay - show only when video is not playing */}
-                                  {(!playingVideo || playingVideo.categoryId !== category.id || playingVideo.videoId !== video.id) && (
-                                    <div 
-                                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        const videoEl = videoRefs.current[`${category.id}-${video.id}`];
-                                        if (videoEl) {
-                                          videoEl.controls = true;
-                                          // Try to play and handle any errors
-                                          const playPromise = videoEl.play();
-                                          
-                                          if (playPromise !== undefined) {
-                                            playPromise
-                                              .then(() => {
-                                                // Video started playing successfully
-                                                handleVideoPlay(category.id, video.id);
-                                              })
-                                              .catch(error => {
-                                                // Auto-play was prevented or other error
-                                                console.error("Video play error:", error);
-                                                // Show controls to allow manual play
-                                                videoEl.controls = true;
-                                              });
-                                          }
-                                        }
-                                      }}
-                                    >
-                                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  )}
-                                  
-                                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 p-2">
-                                    <p className="text-xs text-white line-clamp-2">{video.title}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Carousel indicators */}
-                <div className="flex justify-center gap-1 mt-4">
-                  {Array.from({ length: totalSlides }).map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        pauseCarousel(category.id);
-                        setCurrentSlide(prev => ({ ...prev, [category.id]: index }));
-                        if (carouselRefs.current[category.id]) {
-                          const scrollAmount = carouselRefs.current[category.id]!.clientWidth;
-                          carouselRefs.current[category.id]!.scrollTo({
-                            left: index * scrollAmount,
-                            behavior: 'smooth'
-                          });
-                        }
-                      }}
-                      className={`w-2 h-2 rounded-full ${
-                        (currentSlide[category.id] || 0) === index ? 'bg-blue-600' : 'bg-gray-300'
-                      }`}
-                      aria-label={`Go to slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {resources.videos.map(category => (
+          <div key={category.id} className="space-y-4 group">
+            <h3 className="text-lg font-medium text-blue-600">{category.title}</h3>
+            <VideoCarousel category={category} />
+          </div>
+        ))}
       </div>
     );
   };

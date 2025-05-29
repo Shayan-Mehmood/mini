@@ -32,7 +32,7 @@ const AccessTokenRedirect: React.FC<AccessTokenRedirectProps> = ({
       setStatus('Generating secure access token...');
       // const userId = 2525
       const response = await apiService.post('/auth/generate-access-token', { 
-        userId:'2525',
+        userId:'1',
         destinationPath
       });
 

@@ -97,7 +97,7 @@ const OnboardingFlow = () => {
       })
             if (response.success) {
         // Redirect to dashboard after successful submission
-        navigate("/dashboard")
+        navigate("/create")
       } else {
         throw new Error(response.message || "Failed to save user data")
       }

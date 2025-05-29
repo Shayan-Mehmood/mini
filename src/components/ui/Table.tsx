@@ -223,7 +223,7 @@ const handleEditButtonClick = (item: any, e: React.MouseEvent) => {
   }
   
   // Open in a new tab
-  window.open(url, '_blank');
+  navigate(url);
 };
 
   return (

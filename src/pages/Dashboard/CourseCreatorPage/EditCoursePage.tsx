@@ -566,29 +566,50 @@ const handleSave = async (deleteQuiz: boolean) => {
 };
 
   const handleEditedImageSave = (editedImageUrl: string): void => {
-    if (!quillRef.current || !currentEditingImage) return;
-
-    const editor = quillRef.current.getEditor();
-    if (!editor) return;
-
-    const range = editor.getSelection();
-    const delta = editor.getContents();
-
-    const updatedDelta = updateEditorImage(
-      delta,
-      currentEditingImage,
-      editedImageUrl
+  // Check if we're editing a cover image
+  const isCoverImage = selectedChapterIndex !== -1 && 
+    chapters[selectedChapterIndex] && (
+      (typeof chapters[selectedChapterIndex] === "string" && isCoverChapter(chapters[selectedChapterIndex])) ||
+      (typeof chapters[selectedChapterIndex] === "object" && 
+       "content" in chapters[selectedChapterIndex] && 
+       isCoverChapter((chapters[selectedChapterIndex] as { content?: string }).content ?? ""))
     );
 
-    editor.setContents(updatedDelta as any);
-    if (range) editor.setSelection(range.index, range.length);
-
-    handleContentChange(editor.root.innerHTML);
-    handleSave(false);
-
+  // If this is a cover image, use the cover image handler
+  if (isCoverImage) {
+    // Close the editor first
     setOpenEditor(false);
     setCurrentEditingImage(null);
-  };
+    
+    // Then update the cover with the edited image
+    handleAddCoverImage(editedImageUrl);
+    return;
+  }
+
+  // Otherwise, handle as a regular embedded image
+  if (!quillRef.current || !currentEditingImage) return;
+
+  const editor = quillRef.current.getEditor();
+  if (!editor) return;
+
+  const range = editor.getSelection();
+  const delta = editor.getContents();
+
+  const updatedDelta = updateEditorImage(
+    delta,
+    currentEditingImage,
+    editedImageUrl
+  );
+
+  editor.setContents(updatedDelta as any);
+  if (range) editor.setSelection(range.index, range.length);
+
+  handleContentChange(editor.root.innerHTML);
+  handleSave(false);
+
+  setOpenEditor(false);
+  setCurrentEditingImage(null);
+};
 
 const handleAddCoverImage = async (imageUrl: string) => {
   setImageGallery(false)
@@ -1635,17 +1656,19 @@ isCoverChapter(
       </div>
 
       {/* Modals and dialog boxes */}
-      <Modal
-        isOpen={openEditor}
-        onClose={() => setOpenEditor(false)}
-        title="Image Editor"
-        maxWidth="max-w-6xl"
-      >
-        <ImageEditor
-          initialImageUrl={currentEditingImage || ""}
-          onSave={handleEditedImageSave}
-        />
-      </Modal>
+     <Modal
+  isOpen={openEditor}
+  onClose={() => setOpenEditor(false)}
+  title={ "Edit Cover Image"}
+  maxWidth="max-w-6xl"
+>
+  <ImageEditor
+    initialImageUrl={currentEditingImage || ""}
+    onSave={handleEditedImageSave}
+    isCoverEdit={true}
+   
+  />
+</Modal>
 
       {/* Editor Image Generator Modal */}
       <Modal

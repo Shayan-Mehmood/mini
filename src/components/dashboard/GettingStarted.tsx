@@ -59,7 +59,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({
     >
       <div className="flex flex-col lg:flex-row items-center">
         {/* Content side */}
-        <div className="py-8 px-8 lg:w-1/2 z-10">
+        <div className="py-8 px-8 lg:w-1/2 z-10 mt-20">
           <div>
             <h2 className="mb-4 text-3xl md:text-4xl tracking-tight font-extrabold text-white">{title}</h2>
             <p className="mb-8 font-light text-white sm:text-lg leading-relaxed">{description}</p>

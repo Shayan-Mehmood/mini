@@ -33,6 +33,8 @@ import MarketingResources from "./pages/Dashboard/MarketingResources";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmailCampaign from "./pages/Dashboard/CourseCreatorPage/EmailCampaign";
+import AICoach from "./pages/Dashboard/AiCoach";
+import Profile from "./pages/Dashboard/Profile";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -215,6 +217,20 @@ function App() {
                   path="/dashboard/marketing-resources"
                   element={<MarketingResources />}
                 />
+                  <Route
+                  path="/dashboard/ai-tools"
+                  element={<AICoach />}
+                />
+                  <Route
+                  path="/dashboard/knowledgebase"
+                  element={<Knowledgebase />}
+                />
+                  <Route
+                    path="/dashboard/profile"
+                    element={<Profile />}
+                />
+
+               
                 <Route path="/onboard" element={<OnboardingFlow />} />
                 <Route path="/create" element={<ContentGenerationStepper />} />
                 <Route
@@ -225,7 +241,7 @@ function App() {
               </Route>
               <Route path="/shared/:type/:id" element={<SharedContent />} />
             </Route>
-
+           
             {/* Other routes */}
           </Routes>
         )}

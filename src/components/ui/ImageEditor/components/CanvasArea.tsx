@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import { useMediaQuery } from 'react-responsive';
 
 interface CanvasAreaProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -6,45 +7,28 @@ interface CanvasAreaProps {
 }
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ canvasRef, canvasWrapperRef }) => {
-  useEffect(() => {
-    // Debug canvas dimensions
-    if (canvasRef.current && canvasWrapperRef.current) {
-      const canvas = canvasRef.current;
-      const wrapper = canvasWrapperRef.current;
-      
-      console.log('Canvas element dimensions:', {
-        width: canvas.width,
-        height: canvas.height,
-        clientWidth: canvas.clientWidth,
-        clientHeight: canvas.clientHeight,
-      });
-      console.log('Wrapper dimensions:', {
-        clientWidth: wrapper.clientWidth,
-        clientHeight: wrapper.clientHeight,
-      });
-    }
-  }, []);
-
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  
   return (
     <div className="flex-1 relative bg-gray-50 overflow-hidden">
       <div 
         ref={canvasWrapperRef}
         className="w-full h-full flex items-center justify-center p-4"
         style={{ 
-          minHeight: '400px',
-          minWidth: '400px'
+          minHeight: isMobile ? '300px' : '400px',
+          touchAction: 'none', // Prevent browser handling of touch events
         }}
       >
-        <canvas
-          ref={canvasRef}
-          className="border border-gray-300 rounded-lg shadow-sm bg-white"
-          style={{ 
-            display: 'block',
-            maxWidth: '100%', 
-            maxHeight: '100%'
-          }}
-        />
+        <canvas ref={canvasRef} className="touch-none" />
       </div>
+      
+      {isMobile && (
+        <div className="absolute bottom-16 right-4 opacity-70">
+          <div className="text-xs bg-gray-800 text-white p-2 rounded-lg">
+            Pinch to zoom, use Pan tool to move
+          </div>
+        </div>
+      )}
     </div>
   );
 };

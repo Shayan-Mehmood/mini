@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import CallUsButton from '../components/ui/CallUsButton';
 
 const PublicLayout = () => {
   return (
@@ -10,6 +11,9 @@ const PublicLayout = () => {
         <Outlet />
       </main>
       <Footer />
+      
+      {/* Call Us Button - appears on all public pages */}
+      <CallUsButton />
     </>
   );
 };

@@ -3,6 +3,7 @@ import GettingStarted from "../../components/dashboard/GettingStarted"
 import Tabs from "../../components/ui/tabs"
 import { useDashboardTour } from "../../hooks/useDashboardTour";
 import Header from "../../components/dashboard/Header";
+import CourseSpotlight from "../../components/dashboard/CourseSpotlight";
 
 const Dashboard = () => {
     const { startTour } = useDashboardTour();
@@ -20,7 +21,12 @@ const Dashboard = () => {
                 onTutorialClick={startTour}  
             />
         </div>
+        
         <Tabs />
+
+        <div className="py-5 ">
+            <CourseSpotlight />
+        </div>
         </>
     )
 }

@@ -3,6 +3,8 @@ import { marked } from "marked";
 import apiService from "../service/api";
 import toast from "react-hot-toast";
 
+
+
 // Add utility function to fetch images
 const fetchImage = async (url: string): Promise<{ buffer: ArrayBuffer; type: string } | null> => {
   try {
@@ -40,9 +42,6 @@ const fetchImage = async (url: string): Promise<{ buffer: ArrayBuffer; type: str
     return null;
   }
 };
-
-
-
 
 const processCoverPage = async (
   page: PDFPage,
@@ -623,7 +622,7 @@ export const downloadItem = async (row: any, setLoading: any) => {
 
     // --- SAVE AND DOWNLOAD PDF ---
     console.log("Generating final PDF...");
-    const pdfBytes = await pdfDoc.save();
+    const pdfBytes:any = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -641,6 +640,40 @@ export const downloadItem = async (row: any, setLoading: any) => {
     setLoading(false);
   }
 };
+
+export const downloadDocx = async (row: any, setLoading: any) => {
+setLoading(true) 
+try {
+  const repsonse = await apiService.post('/download-content/asDocx',{
+    content:row
+  })
+  if(repsonse.success){
+    const byteCharacters = atob(repsonse.buffer); // 🔥 Decode base64
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${row["Course Title"].replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+    document.body.appendChild(link);
+    link.click();
+  }else{
+    toast.error(repsonse.message);
+  }
+ } catch (error) {
+  toast.error('Something went wrong');
+ } finally{
+  setLoading(false)
+ }
+
+};
+
+
 
 // Helper function to split long text into multiple lines
 function splitTextIntoLines(text: string, font: any, fontSize: number, maxWidth: number): string[] {
@@ -683,7 +716,9 @@ export const editItem = (navigate:any,link:any,pre:any) =>{
   }
 }
 
+
 export const deleteItem = async (item: any,setCourses:any) => {
+  
   const courseId = item["ID"];
   const courseType = "course"; // or "book", determine dynamically if needed
 
@@ -750,7 +785,7 @@ const cleanImageUrl = (imgSrc: string): string => {
     .replace(/^data:image\/[^;]+;base64,/, (match) => decodeURIComponent(match)); // Handle base64
 };
 
-   export const formatSharedContent = (content: any, title: string, type: 'course' | 'book'): string => {
+export const formatSharedContent = (content: any, title: string, type: 'course' | 'book'): string => {
    try {
     // Parse the content
 

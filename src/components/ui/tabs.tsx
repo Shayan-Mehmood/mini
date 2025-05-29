@@ -4,12 +4,14 @@ import apiService from "../../utilities/service/api";
 import {
   addItem,
   deleteItem,
+  downloadDocx,
   downloadItem,
   editItem,
 } from "../../utilities/shared/tableUtils";
 import { useNavigate } from "react-router";
 import { CircleFadingPlus, Search } from "lucide-react";
 import { getUserId } from "../../utilities/shared/userUtils";
+import Modal from "./Modal";
 
 const Tabs = () => {
   const [courses, setCourses] = useState([]);
@@ -17,98 +19,20 @@ const Tabs = () => {
   const [showBook, setShowBook] = useState(false);
   const [tab, setTab] = useState("course");
   const [loading, setLoading] = useState(false);
-
+  const [isOpen, setIsOpen] = useState(false);
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [itemToDelete, setItemToDelete] = useState(null);
   const userId = getUserId();
 
   // Reset pagination when tab changes
   useEffect(() => {
     setCurrentPage(1);
-    // getAllCourses();
   }, [tab]);
 
-  // Fetch data with pagination
-  // Replace the fetch data function in the useEffect with this implementation:
-
-  // const getAllCourses = async () => {
-  //   try {
-  //     const response = await apiService.get(`course-creator/getAllCourses`);
-
-  //     if (response.data.length === 0) {
-  //       navigate("/create");
-  //       return;
-  //     }
-  //   } catch (error) {}
-  // };
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     setLoading(true);
-  //     try {
-  //       // Add pagination params to API request
-  //       const response = await apiService.get(
-  //         `course-creator/getCourses/${tab}?page=${currentPage}&limit=${itemsPerPage}`
-  //       );
-
-  //       if (response.success) {
-  //         const formattedCourses = response.data.map((course: any) => {
-  //           const formatDate = (dateString: string) => {
-  //             const options: Intl.DateTimeFormatOptions = {
-  //               year: "numeric",
-  //               month: "short",
-  //               day: "2-digit",
-  //             };
-  //             return new Date(dateString).toLocaleDateString(
-  //               undefined,
-  //               options
-  //             );
-  //           };
-
-  //           return {
-  //             ID: course.course_id,
-  //             "Course Title": course.course_title,
-  //             Created: formatDate(course.createdAt),
-  //             Updated: formatDate(course.updatedAt),
-  //             Content: course.content,
-  //             type: course.type,
-  //           };
-  //         });
-
-  //         // Update state with formatted data and total count
-  //         if (tab === "course") {
-  //           setCourses(formattedCourses);
-  //         } else {
-  //           setBooks(formattedCourses);
-  //         }
-
-  //         // Set pagination info from the response
-  //         if (response.pagination) {
-  //           setTotalItems(response.pagination.totalItems);
-  //           // Only update itemsPerPage if it differs from current state to avoid loops
-  //           if (response.pagination.itemsPerPage !== itemsPerPage) {
-  //             setItemsPerPage(response.pagination.itemsPerPage);
-  //           }
-  //           // Update current page if it differs from what we expect (defensive)
-  //           if (response.pagination.currentPage !== currentPage) {
-  //             setCurrentPage(response.pagination.currentPage);
-  //           }
-  //         }
-  //       } else {
-  //         console.error("API returned error:", response.message);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching data:", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, [tab, currentPage, itemsPerPage]);
 
   // Handle tab change
   const handleTabChange = (newTab: string) => {
@@ -228,6 +152,12 @@ const Tabs = () => {
     }
   };
 
+  const handleDelete = (item: any,setCourses:any) => {
+    setIsOpen(true);
+    setItemToDelete(item);
+
+  };
+
   // Optional: Add a debounce effect
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -299,14 +229,16 @@ const Tabs = () => {
                 />
               </div>
             </div>
+            {/* need a modal to confirm deletion */}
+
             <Table
               headers={["Name", "Description", "Created At", "Updated At"]}
               data={courses}
               isAdd={false}
               addItem={addItem}
-              deleteItem={deleteItem}
+              deleteItem={handleDelete}
               setData={handleContentUpdate}
-              downloadItem={(row: any) => downloadItem(row, setLoading)}
+              downloadItem={(row: any) => downloadDocx(row, setLoading)}
               editItem={editItem}
               pre={"course-creator"}
               setLoading={setLoading}
@@ -339,9 +271,9 @@ const Tabs = () => {
               data={books}
               isAdd={false}
               addItem={addItem}
-              deleteItem={deleteItem}
+              deleteItem={handleDelete}
               setData={handleContentUpdate}
-              downloadItem={(row: any) => downloadItem(row, setLoading)}
+              downloadItem={(row: any) => downloadDocx(row, setLoading)}
               editItem={editItem}
               pre={"book-creator"}
               setLoading={setLoading}
@@ -354,6 +286,18 @@ const Tabs = () => {
             />
           </div>
         )}
+
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Delete Course"
+        children={<div className="flex flex-col gap-4">Are you sure you want to delete this course?
+        <div className="flex justify-end gap-4">
+          <button onClick={() => setIsOpen(false)} className="bg-gray-500 text-white px-4 py-2 rounded-md">Cancel</button>
+          <button onClick={() =>{ deleteItem(itemToDelete, handleContentUpdate); setIsOpen(false);}} className="bg-red-500 text-white px-4 py-2 rounded-md">Delete</button>
+        </div>
+        </div>}
+      />  
       </div>
     </div>
   );

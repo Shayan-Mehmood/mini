@@ -24,11 +24,11 @@ const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
 
   const categories = [
     { icon: Move, category: CATEGORIES.SELECTION, label: "Selection", color: "blue" },
-    { icon: Pencil, category: CATEGORIES.DRAWING, label: "Drawing", color: "green" },
+    // { icon: Pencil, category: CATEGORIES.DRAWING, label: "Drawing", color: "green" },
     { icon: Square, category: CATEGORIES.SHAPES, label: "Shapes", color: "purple" },
     { icon: Type, category: CATEGORIES.TEXT, label: "Text", color: "orange" },
     { icon: Crop, category: CATEGORIES.TRANSFORM, label: "Transform", color: "red" },
-    { icon: Sliders, category: CATEGORIES.FILTERS, label: "Filters", color: "indigo" }
+    // { icon: Sliders, category: CATEGORIES.FILTERS, label: "Filters", color: "indigo" }
   ];
 
   const getColorClasses = (color: string, isActive: boolean) => {

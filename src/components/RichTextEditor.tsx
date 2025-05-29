@@ -27,15 +27,9 @@ interface RichTextEditorProps {
   onImageClick?: (imageUrl: string) => void;
 }
 
-// --- Fix: Ensure images are not removed during resize ---
-// In cleanHtmlContent, always skip cleaning if isResizing is true
-const cleanHtmlContent = (htmlContent: string, isResizing: boolean = false): string => {
+// Improved cleanHtmlContent function that preserves image attributes during resize
+const cleanHtmlContent = (htmlContent: string): string => {
   if (!htmlContent) return htmlContent;
-  
-  // Always skip cleaning during resize
-  if (isResizing) {
-    return htmlContent;
-  }
   
   if(typeof(htmlContent) === 'string'){
     var cleanedContent: any = htmlContent
@@ -45,7 +39,7 @@ const cleanHtmlContent = (htmlContent: string, isResizing: boolean = false): str
       .replace(/<ul>\s*<\/ul>/g, '')
       .replace(/<ol>\s*<\/ol>/g, '');
       
-    // Only clean pre tags, don't touch images during normal operations
+    // Only clean pre tags, don't touch images
     cleanedContent = cleanedContent.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/g, (match: any, content: any) => {
       return content;
     });
@@ -70,7 +64,9 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
     const editorRef = useRef<HTMLDivElement | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showPlaceholder, setShowPlaceholder] = useState(!initialContent);
-    const skipCleaningRef = useRef(false);
+    const skipContentUpdateRef = useRef(false);
+    const contentBeforeResizeRef = useRef<string>('');
+    const pendingContentRef = useRef<string | null>(null);
 
     useEffect(() => {
       if (initialContent) {
@@ -97,8 +93,12 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
         const target = e.target as HTMLElement;
         
         if (target.classList.contains('blot-formatter__resize-handle')) {
+          // Store current content state before resize starts
+          contentBeforeResizeRef.current = content;
+          
+          // Enable resize mode
           isResizingRef.current = true;
-          skipCleaningRef.current = true;
+          skipContentUpdateRef.current = true;
           
           // Add resizing class to editor wrapper
           if (editorRef.current) {
@@ -124,6 +124,7 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
 
       const handleMouseMove = (e: MouseEvent) => {
         if (isResizingRef.current) {
+          // Prevent browser default behaviors during resize
           e.preventDefault();
           e.stopPropagation();
         }
@@ -136,14 +137,26 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
             editorRef.current.classList.remove('resizing');
           }
           
-          // Restore scroll
+          // Restore scroll behavior
           document.body.style.overflow = '';
           
-          // Delay before allowing cleaning again
+          // Important: Update content with the current state after resize
           setTimeout(() => {
             isResizingRef.current = false;
-            skipCleaningRef.current = false;
-          }, 200); // Increased delay
+            skipContentUpdateRef.current = false;
+            
+            // If we have pending content updates from resize, apply them now
+            if (pendingContentRef.current) {
+              setContent(pendingContentRef.current);
+              onContentChange(pendingContentRef.current);
+              pendingContentRef.current = null;
+            } else if (ref && 'current' in ref && ref.current) {
+              // Get the final state directly from Quill
+              const finalContent = ref.current.getEditor().root.innerHTML;
+              setContent(finalContent);
+              onContentChange(finalContent);
+            }
+          }, 200);
         }
       };
 
@@ -157,18 +170,18 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.overflow = '';
       };
-    }, []);
+    }, [content, onContentChange]);
 
     const handleChange = (value: string) => {
-      // Skip cleaning during resize operations
-      if (skipCleaningRef.current || isResizingRef.current) {
-        setContent(value);
-        onContentChange(value);
+      if (isResizingRef.current) {
+        // During resize: Store the value but don't update state or call callbacks
+        // This prevents React re-renders during resize operations
+        pendingContentRef.current = value;
         return;
       }
       
-      // Clean content only when not resizing
-      const cleanedContent = cleanHtmlContent(value, isResizingRef.current);
+      // Only clean and update content when not resizing
+      const cleanedContent = cleanHtmlContent(value);
       setContent(cleanedContent);
       onContentChange(cleanedContent);
     };
@@ -184,7 +197,7 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
           [{ color: [] }, { background: [] }],
           [{ align: ['', 'center', 'right', 'justify'] }],
-          ['link', 'image', 'video'],
+          ['link'],
           ['clean'],
         ],
       },
@@ -220,6 +233,24 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
         matchVisual: false
       }
     };
+    
+    // Add this CSS to your styles
+    useEffect(() => {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .resizing .ql-editor {
+          user-select: none !important;
+          pointer-events: none !important;
+        }
+        .resizing .blot-formatter__resize-handle {
+          pointer-events: auto !important;
+        }
+      `;
+      document.head.appendChild(style);
+      return () => {
+        document.head.removeChild(style);
+      };
+    }, []);
 
     // Render placeholder
     if (showPlaceholder) {
@@ -240,23 +271,9 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       );
     }
 
-    useEffect(() => {
-      const handleFocusOut = (e: FocusEvent) => {
-        const editorEl = editorRef.current;
-        if (editorEl && !isResizingRef.current) {
-          // Only save when not resizing
-          console.log('Saving content...');
-          // onSave();
-        }
-      };
-
-      window.addEventListener('blur', handleFocusOut, true);
-      return () => window.removeEventListener('blur', handleFocusOut, true);
-    }, [content, onSave]);
-
     // Simplified image CORS fix - only run once after content stabilizes
     useEffect(() => {
-      if (isResizingRef.current || skipCleaningRef.current) {
+      if (isResizingRef.current) {
         return; // Skip during resize
       }
 

@@ -83,11 +83,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const categories = [
     { id: CATEGORIES.SELECTION, icon: Move, label: 'Selection', color: 'text-blue-600' },
-    { id: CATEGORIES.DRAWING, icon: Pencil, label: 'Drawing', color: 'text-green-600' },
+    // { id: CATEGORIES.DRAWING, icon: Pencil, label: 'Drawing', color: 'text-green-600' },
     { id: CATEGORIES.SHAPES, icon: Square, label: 'Shapes', color: 'text-purple-600' },
     { id: CATEGORIES.TEXT, icon: Type, label: 'Text', color: 'text-orange-600' },
     { id: CATEGORIES.TRANSFORM, icon: Crop, label: 'Transform', color: 'text-red-600' },
-    { id: CATEGORIES.FILTERS, icon: Sliders, label: 'Filters', color: 'text-indigo-600' }
+    // { id: CATEGORIES.FILTERS, icon: Sliders, label: 'Filters', color: 'text-indigo-600' }
   ];
 
   const CategoryButton = ({ category, icon: Icon, label, color }: any) => (
@@ -117,19 +117,19 @@ const Sidebar: React.FC<SidebarProps> = ({
             onDeleteSelected={onDeleteSelected}
           />
         );
-      case CATEGORIES.DRAWING:
-        return (
-          <DrawingTools
-            activeMode={activeMode}
-            color={color}
-            setColor={setColor}
-            strokeWidth={strokeWidth}
-            setStrokeWidth={setStrokeWidth}
-            showColorPicker={showColorPicker}
-            setShowColorPicker={setShowColorPicker}
-            onDrawingMode={onDrawingMode}
-          />
-        );
+      // case CATEGORIES.DRAWING:
+      //   return (
+      //     <DrawingTools
+      //       activeMode={activeMode}
+      //       color={color}
+      //       setColor={setColor}
+      //       strokeWidth={strokeWidth}
+      //       setStrokeWidth={setStrokeWidth}
+      //       showColorPicker={showColorPicker}
+      //       setShowColorPicker={setShowColorPicker}
+      //       onDrawingMode={onDrawingMode}
+      //     />
+      //   );
       case CATEGORIES.SHAPES:
         return (
           <ShapeTools
@@ -166,24 +166,25 @@ const Sidebar: React.FC<SidebarProps> = ({
             setActiveTool={setActiveTool}
           />
         );
-      case CATEGORIES.FILTERS:
-        return (
-          <FilterTools
-            brightness={brightness}
-            setBrightness={setBrightness}
-            contrast={contrast}
-            setContrast={setContrast}
-            saturation={saturation}
-            setSaturation={setSaturation}
-            onApplyFilters={onApplyFilters}
-            onResetFilters={() => {
-              setBrightness(0);
-              setContrast(0);
-              setSaturation(0);
-            }}
-          />
-        );
-      default:
+      // case CATEGORIES.FILTERS:
+      //   return (
+      //     <FilterTools
+      //       brightness={brightness}
+      //       setBrightness={setBrightness}
+      //       contrast={contrast}
+      //       setContrast={setContrast}
+      //       saturation={saturation}
+      //       setSaturation={setSaturation}
+      //       onApplyFilters={onApplyFilters}
+      //       onResetFilters={() => {
+      //         setBrightness(0);
+      //         setContrast(0);
+      //         setSaturation(0);
+      //       }}
+      //     />
+      //   );
+      
+        default:
         return null;
     }
   };

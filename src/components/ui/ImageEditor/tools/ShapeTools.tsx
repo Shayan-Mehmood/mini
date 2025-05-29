@@ -25,7 +25,7 @@ const ShapeTools: React.FC<ShapeToolsProps> = ({
     { id: 'rectangle', icon: Square, label: 'Rectangle' },
     { id: 'circle', icon: Circle, label: 'Circle' },
     { id: 'triangle', icon: Triangle, label: 'Triangle' },
-    { id: 'star', icon: Star, label: 'Star' }
+    // { id: 'star', icon: Star, label: 'Star' }
   ];
 
   return (
@@ -49,7 +49,7 @@ const ShapeTools: React.FC<ShapeToolsProps> = ({
         ))}
       </div>
       
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-2">
           <Square size={14} />
           Border Width
@@ -63,7 +63,7 @@ const ShapeTools: React.FC<ShapeToolsProps> = ({
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
         />
         <div className="text-xs text-gray-500 text-center">{strokeWidth}px</div>
-      </div>
+      </div> */}
       
       <ColorPicker
         color={color}
