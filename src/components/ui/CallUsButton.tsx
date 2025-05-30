@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Phone, Mail, X, MessageCircle } from 'lucide-react';
+import { useLocation, useParams } from 'react-router';
 
 const CallUsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-
+  const location = useLocation();
+  const {pathname} = location;
+  const isEditPage = pathname.includes('/edit');
+  console.log(isEditPage,' ')
   const contactOptions = [
     {
       type: 'email',
@@ -14,15 +18,6 @@ const CallUsButton: React.FC = () => {
       },
       description: 'Get help via email'
     },
-    // {
-    //   type: 'phone',
-    //   label: 'Call us Now',
-    //   icon: Phone,
-    //   action: () => {
-    //     window.location.href = 'tel:+1-555-0123';
-    //   },
-    //   description: 'Speak with our team'
-    // }
   ];
 
   const handleOptionClick = (option: typeof contactOptions[0]) => {
@@ -42,7 +37,7 @@ const CallUsButton: React.FC = () => {
 
       {/* Contact Options Panel */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 md:bottom-24 md:right-6 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-enter">
+        <div className={`fixed bottom-20 right-4 md:bottom-24 md:right-6 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-enter $`}>
           <div className="p-4 border-b border-gray-100 bg-gradient-to-tl">
             <div className="flex items-center justify-between">
               <h3 className="font-secondary font-semibold text-white text-lg">Contact Us</h3>
@@ -89,9 +84,9 @@ const CallUsButton: React.FC = () => {
       {/* Floating Call Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${
+        className={` bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${
           isOpen ? 'scale-95' : 'hover:scale-105'
-        }`}
+        } ${isEditPage ? 'hidden' : 'fixed'}`}
         aria-label={isOpen ? 'Close contact options' : 'Open contact options'}
       >
         {isOpen ? (
@@ -101,9 +96,7 @@ const CallUsButton: React.FC = () => {
         )}
         
         {/* Pulse animation ring */}
-        {!isOpen && (
-          <div className="absolute inset-0 rounded-full bg-gradient-to-tl opacity-75 animate-ping"></div>
-        )}
+        
       </button>
 
       {/* Tooltip for desktop */}
