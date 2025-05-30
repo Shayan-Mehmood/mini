@@ -30,26 +30,30 @@ const AccessTokenRedirect: React.FC<AccessTokenRedirectProps> = ({
       
       // Step 2: Sending request to server
       setStatus('Generating secure access token...');
-      // Commented out the API call - we'll use a fixed URL instead
-      // const response = await apiService.post('/auth/generate-access-token', { 
-      //   userId:'1',
-      //   destinationPath
-      // });
+      // const userId = 2525
+      const response = await apiService.post('/auth/generate-access-token', { 
+        userId:'1',
+        destinationPath
+      });
 
-      // console.log('[AccessTokenRedirect] Response:', response);
+      console.log('[AccessTokenRedirect] Response:', response);
       
-      // Step 3: Simulating response processing
+      // Step 3: Analyzing response
       setStatus('Processing server response...');
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Step 4: Preparing redirect with fixed URL
-      setStatus('Access granted! Redirecting...');
-      
-      // Redirect user to the fixed URL
-      setTimeout(() => {
-        window.location.href = 'https://mini-ashen.vercel.app/';
-      }, 800);
-      
+      if (response.success && response?.redirectUrl) {
+        // Step 4: Preparing redirect
+        setStatus('Access granted! Redirecting...');
+        
+        // Redirect user to the external app with the token
+        setTimeout(() => {
+          window.location.href = response.redirectUrl;
+        }, 800);
+      } else {
+        setError(response.message || 'Failed to generate access token');
+        setStatus('');
+      }
     } catch (err: any) {
       console.error('[AccessTokenRedirect] Error:', err);
       setError(err.message || 'An error occurred while generating access token');

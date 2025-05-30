@@ -67,7 +67,7 @@ const [isLoading, setIsLoading] = useState(false);
             
             // Redirect user to the external app with the token
             setTimeout(() => {
-              window.location.href = `https://mini-ashen.vercel.app/?token=${response.accessToken}`;
+              window.location.href = response.redirectUrl;
             }, 800);
           } else {
             setError(response.message || 'Failed to generate access token');
@@ -123,7 +123,7 @@ const [isLoading, setIsLoading] = useState(false);
                   flex items-center justify-center mb-8" onClick={()=> console.log('HEHE')}>
                 <Layers className="w-16 h-16 text-white" />
                 {/* <button className='px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700' onClick={()=>window.location.href='/dashboard'}> */}
-                <button className='px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700' onClick={()=> handleRedirect()}>
+                <button className='px-4 py-2 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700' onClick={()=>handleRedirect()}>
                   <ArrowBigRight/> Continue to DashBoard
                 </button>
               </div>

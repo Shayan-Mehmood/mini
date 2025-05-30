@@ -4,12 +4,11 @@ import apiService from "../../utilities/service/api";
 import {
   addItem,
   deleteItem,
-  downloadDocx,
   downloadItem,
   editItem,
 } from "../../utilities/shared/tableUtils";
 import { useNavigate } from "react-router";
-import { CircleFadingPlus, Search } from "lucide-react";
+import { CircleFadingPlus, FilePen, File, Search, FileType, FileText } from "lucide-react";
 import { getUserId } from "../../utilities/shared/userUtils";
 import Modal from "./Modal";
 
@@ -26,6 +25,8 @@ const Tabs = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemToDownload, setItemToDownload] = useState(null);
+  const [isOpenDownloadAs, setIsOpenDownloadAs] = useState(false);
   const userId = getUserId();
 
   // Reset pagination when tab changes
@@ -158,6 +159,11 @@ const Tabs = () => {
 
   };
 
+  const handleDownload = (row: any) => {
+    setIsOpenDownloadAs(true);
+    setItemToDownload(row);
+  }
+
   // Optional: Add a debounce effect
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -238,7 +244,7 @@ const Tabs = () => {
               addItem={addItem}
               deleteItem={handleDelete}
               setData={handleContentUpdate}
-              downloadItem={(row: any) => downloadDocx(row, setLoading)}
+              downloadItem={(row: any) => handleDownload(row)}
               editItem={editItem}
               pre={"course-creator"}
               setLoading={setLoading}
@@ -273,7 +279,7 @@ const Tabs = () => {
               addItem={addItem}
               deleteItem={handleDelete}
               setData={handleContentUpdate}
-              downloadItem={(row: any) => downloadDocx(row, setLoading)}
+              downloadItem={(row: any) => handleDownload(row)}
               editItem={editItem}
               pre={"book-creator"}
               setLoading={setLoading}
@@ -298,6 +304,31 @@ const Tabs = () => {
         </div>
         </div>}
       />  
+      <Modal
+        isOpen={isOpenDownloadAs}
+        onClose={() => setIsOpenDownloadAs(false)}
+        title="Download as"
+        children={<div 
+          className="flex flex-col gap-2"
+        >
+          <div className="flex gap-2">
+          <button 
+            onClick={() => {downloadItem(itemToDownload,setLoading,'pdf'); setIsOpenDownloadAs(false)}}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <FileType className="w-4 h-4 text-red-500" />
+            Download as PDF
+          </button>
+          <button 
+            onClick={() => {downloadItem(itemToDownload,setLoading,'docx'); setIsOpenDownloadAs(false)}}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4 text-blue-500" />
+            Download as Word
+          </button>
+          </div>
+        </div>}
+      />
       </div>
     </div>
   );

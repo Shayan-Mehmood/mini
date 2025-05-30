@@ -2,7 +2,19 @@ import { PDFDocument, StandardFonts, rgb, PDFPage } from "pdf-lib";
 import { marked } from "marked";
 import apiService from "../service/api";
 import toast from "react-hot-toast";
-
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  ImageRun,
+  AlignmentType,
+  Header,
+  Footer,
+  PageNumber,
+  LevelFormat,
+} from "docx";
 
 
 // Add utility function to fetch images
@@ -40,6 +52,19 @@ const fetchImage = async (url: string): Promise<{ buffer: ArrayBuffer; type: str
   } catch (error) {
     console.error('Error fetching image:', error);
     return null;
+  }
+};
+
+const parseThisShit = (content:any) => {
+  let parsedContent;
+  try {
+    parsedContent = JSON.parse(content);
+    return parsedContent
+  } catch (e) {
+    parsedContent = content
+      .split('","')
+      .map((ch:any) => ch.replace(/^"|"$/g, "").replace(/^"|"$/g, '').replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n').replace(/\s+/g, ' ') .trim());
+    return parsedContent
   }
 };
 
@@ -150,7 +175,163 @@ const cleanHtmlContent = (html: string) => {
     .replace(/&#39;/g, "'");
 };
 
-export const downloadItem = async (row: any, setLoading: any) => {
+// Shared content processing function
+const processContentForDownload = async (row: any) => {
+  console.log("Original Content:", row.Content);
+
+  // Parse and clean content
+  let chapters = [];
+  try {
+    // Remove escaped characters and clean JSON
+    const cleanedContent = row.Content
+      .replace(/^"|"$/g, '')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\n/g, '\n')
+      .replace(/\[\\"|\\"]/g, '"')
+      .replace(/"{2,}/g, '"');
+
+    // Parse content
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(cleanedContent);
+    } catch (e) {
+      console.log("First parse failed, trying alternative:", e);
+      parsedContent = cleanedContent.split('","').map((ch: any) => 
+        ch.replace(/^"|"$/g, '')
+      );
+    }
+
+    chapters = Array.isArray(parsedContent) ? parsedContent : [parsedContent];
+  } catch (error) {
+    console.error("Content parsing error:", error);
+    throw error;
+  }
+
+  // Process chapters and extract cover
+  let hasCover = false;
+  let coverData = null;
+  
+  const coverIndex = chapters.findIndex((ch: any) =>
+    typeof ch === 'string' && (
+      ch.includes('book-cover-image') || 
+      ch.includes('data-cover="true"')
+    ) || (
+      typeof ch === 'object' && ch.content && (
+        ch.content.includes('book-cover-image') ||
+        ch.content.includes('data-cover="true"')
+      )
+    )
+  );
+
+  // Extract cover if found
+  if (coverIndex >= 0) {
+    const parser = new DOMParser();
+    const chapterContent = typeof chapters[coverIndex] === 'object' && chapters[coverIndex].content 
+      ? chapters[coverIndex].content 
+      : chapters[coverIndex];
+    const doc = parser.parseFromString(chapterContent, 'text/html');
+    
+    // Find the cover image using multiple selectors
+    const coverImage = doc.querySelector('.book-cover-image') || 
+                       doc.querySelector('img') || 
+                       doc.querySelector('p.ql-align-center img');
+                       
+    if (coverImage && coverImage.getAttribute('src')) {
+      coverData = {
+        src: coverImage.getAttribute('src'),
+        content: chapterContent
+      };
+      hasCover = true;
+      // Remove the cover chapter since we processed it
+      chapters.splice(coverIndex, 1);
+    } else {
+      // Found a cover chapter but no image, so just remove it
+      chapters.splice(coverIndex, 1);
+    }
+  }
+
+  return {
+    chapters,
+    hasCover,
+    coverData,
+    courseTitle: row["Course Title"] || "Untitled Course"
+  };
+};
+
+// Helper function to convert base64 to ArrayBuffer (browser-compatible)
+function base64ToArrayBuffer(base64: string): ArrayBuffer | null {
+  try {
+    // Clean the base64 string
+    const cleanBase64 = base64.replace(/\s/g, '').replace(/[^A-Za-z0-9+/=]/g, '');
+    
+    if (!cleanBase64) {
+      console.error('Empty base64 string');
+      return null;
+    }
+    
+    console.log('Converting base64 to buffer, length:', cleanBase64.length);
+    
+    const binaryString = window.atob(cleanBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    console.log('Successfully converted base64, buffer size:', bytes.buffer.byteLength);
+    return bytes.buffer;
+  } catch (error) {
+    console.error('Error converting base64 to ArrayBuffer:', error);
+    return null;
+  }
+}
+
+// Helper: fetch image and convert to array buffer
+async function fetchImageBuffer(url: string) {
+  try {
+    console.log('📸 Attempting to fetch image:', url.substring(0, 150) + '...');
+    
+    // Clean the URL
+    let cleanUrl = url.replace(/&amp;/g, "&").trim();
+    console.log(cleanUrl, "cleanUrl")
+    // Check if it's a base64 image
+    if (cleanUrl.startsWith('data:image/')) {
+      console.log('🔢 Processing as base64 image');
+      const base64Data = cleanUrl.split(',')[1];
+      if (base64Data) {
+        console.log('🔢 Converting base64 image to buffer, length:', base64Data.length);
+        const buffer = base64ToArrayBuffer(base64Data);
+        if (buffer) {
+          console.log('✅ Base64 conversion successful, size:', buffer.byteLength);
+          return buffer;
+        } else {
+          console.log('❌ Base64 conversion failed');
+          return null;
+        }
+      } else {
+        console.log('❌ No base64 data found in data URL');
+        return null;
+      }
+    }else{
+      cleanUrl = cleanUrl.trim().replace(/^\"|\\?\s*\"?$/g, '');
+      const {buffer,type} = await fetchImage(cleanUrl) as any;
+      if(buffer){
+        console.log('✅ Successfully fetched image', buffer.byteLength);
+        return buffer;
+      }else{
+        console.log('❌ Failed to fetch image');
+        return null;
+      }
+    }
+    
+  } catch (err) {
+    console.error('❌ Error fetching image:', url.substring(0, 100), err);
+    return null;
+  }
+}
+
+export const downloadItem = async (row: any, setLoading: any, format: 'pdf' | 'docx' = 'pdf') => {
   if (!row?.Content) {
     console.error("No content to download");
     return;
@@ -158,519 +339,858 @@ export const downloadItem = async (row: any, setLoading: any) => {
 
   try {
     setLoading(true);
-    console.log("Original Content:", row.Content);
-
-    // Parse and clean content
-    let chapters = [];
-    try {
-      // Remove escaped characters and clean JSON
-      const cleanedContent = row.Content
-        .replace(/^"|"$/g, '')
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\')
-        .replace(/\\n/g, '\n')
-        .replace(/\[\\"|\\"]/g, '"')
-        .replace(/"{2,}/g, '"');
-
-      // Parse content
-      let parsedContent;
-      try {
-        parsedContent = JSON.parse(cleanedContent);
-      } catch (e) {
-        console.log("First parse failed, trying alternative:", e);
-        parsedContent = cleanedContent.split('","').map((ch:any) => 
-          ch.replace(/^"|"$/g, '')
-        );
-      }
-
-      chapters = Array.isArray(parsedContent) ? parsedContent : [parsedContent];
-    } catch (error) {
-      console.error("Content parsing error:", error);
-      return;
+    
+    // Process content (shared between PDF and DOCX)
+    const processedContent = await processContentForDownload(row);
+    
+    if (format === 'docx') {
+      await generateDocx(processedContent, setLoading);
+    } else {
+      await generatePdf(processedContent, setLoading);
     }
-
-    // Create PDF document with NO pages initially
-    const pdfDoc = await PDFDocument.create();
-    const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-    const timesBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-    const timesItalicFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
-
-    // --- CREATE TITLE PAGE (FIRST PAGE) ---
-    const titlePage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-    const { width: pageWidth, height: pageHeight } = titlePage.getSize();
-    
-    // Draw "Mini Lesson Academy" title centered on first page
-    const titleText = "Mini Lesson Academy";
-    const titleFontSize = 32;
-    const titleWidth = timesBoldFont.widthOfTextAtSize(titleText, titleFontSize);
-    
-    titlePage.drawText(titleText, {
-      x: (pageWidth - titleWidth) / 2,
-      y: pageHeight * 0.6, // Position it above center
-      size: titleFontSize,
-      font: timesBoldFont,
-      color: rgb(0.39, 0.04, 0.67), // Purple color (#650AAA)
-    });
-
-    // Draw course title below the main title
-    const courseTitle = row["Course Title"] || "Untitled Course";
-    const courseTitleFontSize = 22;
-    const courseTitleLines = splitTextIntoLines(courseTitle, timesBoldFont, courseTitleFontSize, pdfConfig.maxWidth * 0.8);
-    
-    let courseTitleY = pageHeight * 0.5;
-    courseTitleLines.forEach(line => {
-      const lineWidth = timesBoldFont.widthOfTextAtSize(line, courseTitleFontSize);
-      titlePage.drawText(line, {
-        x: (pageWidth - lineWidth) / 2,
-        y: courseTitleY,
-        size: courseTitleFontSize,
-        font: timesBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      courseTitleY -= courseTitleFontSize * 1.7; // Increased spacing here
-    });
-
-    // Draw date at bottom
-    const dateText = new Date().toLocaleDateString();
-    titlePage.drawText(dateText, {
-      x: (pageWidth - timesRomanFont.widthOfTextAtSize(dateText, 12)) / 2,
-      y: pageHeight * 0.1,
-      size: 12,
-      font: timesRomanFont,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-
-    // --- COVER DETECTION AND PROCESSING ---
-    let hasCover = false;
-    
-    const coverIndex = chapters.findIndex(ch =>
-      typeof ch === 'string' && (
-        ch.includes('book-cover-image') || 
-        ch.includes('data-cover="true"')
-      ) || (
-        typeof ch === 'object' && ch.content && (
-          ch.content.includes('book-cover-image') ||
-          ch.content.includes('data-cover="true"')
-        )
-      )
-    );
-
-    // Process cover if found - place it as page 2
-    if (coverIndex >= 0) {
-      const parser = new DOMParser();
-      const chapterContent = typeof chapters[coverIndex] === 'object' && chapters[coverIndex].content 
-        ? chapters[coverIndex].content 
-        : chapters[coverIndex];
-      const doc = parser.parseFromString(chapterContent, 'text/html');
-      
-      // Find the cover image using multiple selectors
-      const coverImage = doc.querySelector('.book-cover-image') || 
-                         doc.querySelector('img') || 
-                         doc.querySelector('p.ql-align-center img');
-                         
-      if (coverImage && coverImage.getAttribute('src')) {
-        // Add cover page as the SECOND page
-        const coverPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-        hasCover = await processCoverPage(coverPage, chapterContent, pdfDoc, row["Course Title"]);
-        
-        if (hasCover) {
-          // Remove the cover chapter since we processed it successfully
-          chapters.splice(coverIndex, 1);
-        } else {
-          // If cover processing failed, remove the page
-          pdfDoc.removePage(1); // Remove the second page (index 1)
-        }
-      } else {
-        // Found a cover chapter but no image, so just remove it
-        chapters.splice(coverIndex, 1);
-      }
-    }
-
-    // --- IMPROVED TEXT WRAPPING FUNCTION ---
-    const drawWrappedText = (text: string, font: any, fontSize: number, startX: number, startY: number, currentPage: PDFPage, indent = 0) => {
-      if (!text || text.trim() === '') return { y: startY, page: currentPage };
-      
-      const words = text.trim().split(' ');
-      let currentLine = '';
-      let currentY = startY;
-      let page = currentPage;
-
-      // Calculate line height based on font size - INCREASED for better spacing
-      const lineHeight = fontSize * 1.6; // Increased from 1.3 to 1.6
-
-      const drawLine = (line: string, y: number) => {
-        if (!line.trim()) return y;
-        
-        // Don't draw text if it would be off-page - increased margin
-        if (y < pdfConfig.margin + fontSize + 5) {
-          return y;
-        }
-        
-        page.drawText(line.trim(), {
-          x: startX + indent,
-          y,
-          size: fontSize,
-          font,
-          color: rgb(0, 0, 0),
-        });
-        
-        // Return the position after drawing the line with increased spacing
-        return y - lineHeight;
-      };
-
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
-
-        if (lineWidth > pdfConfig.maxWidth - indent) {
-          // Draw current line and move down
-          currentY = drawLine(currentLine, currentY);
-          currentLine = word;
-
-          // Check if we need a new page - increase threshold for new page
-          if (currentY < pdfConfig.margin + fontSize + 10) {
-            const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-            page = newPage;
-            currentY = page.getSize().height - pdfConfig.margin;
-          }
-        } else {
-          currentLine = testLine;
-        }
-      }
-
-      // Draw the last line if there is one
-      if (currentLine.trim()) {
-        currentY = drawLine(currentLine, currentY);
-      }
-
-      // Add some extra space after text block
-      currentY -= fontSize * 0.3;
-
-      return { y: currentY, page };
-    };
-
-    // --- PROCESS CHAPTERS WITH ENHANCED FORMATTING ---
-    let currentPage = null;
-    let currentY = 0;
-    
-    for (let i = 0; i < chapters.length; i++) {
-      console.log(`Processing chapter ${i + 1}`);
-      
-      // Create a new page for each chapter
-      const chapterPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-      currentPage = chapterPage;
-      currentY = chapterPage.getSize().height - pdfConfig.margin;
-      
-      // Process chapter content
-      try {
-        const parser = new DOMParser();
-        const chapterContent = cleanHtmlContent(chapters[i]);
-        const doc = parser.parseFromString(chapterContent, 'text/html');
-
-        // Add chapter spacing
-        currentY -= pdfConfig.chapterSpacing;
-
-        // Find main elements to process
-        const elements = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p, ul, ol, img');
-        
-        if (elements.length === 0) {
-          // If this chapter has no content, remove the page to avoid empty pages
-          pdfDoc.removePage(pdfDoc.getPageCount() - 1);
-          continue;
-        }
-        
-        for (const element of elements) {
-          const tagName = element.tagName.toLowerCase();
-          
-          // Estimate element height for page break calculation - INCREASED heights
-          let estimatedElementHeight = 0;
-          if (tagName === 'img') {
-            estimatedElementHeight = 450; // Increased estimate for images
-          } else if (tagName.startsWith('h')) {
-            estimatedElementHeight = 50; // Increased estimate for headings
-          } else {
-            estimatedElementHeight = 20; // Increased estimate for paragraphs/lists
-          }
-          
-          // Create a new page if this element likely won't fit
-          if (currentY - estimatedElementHeight < pdfConfig.margin) {
-            const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-            currentPage = newPage;
-            currentY = newPage.getSize().height - pdfConfig.margin;
-          }
-
-          // Process the element based on its type
-          if (tagName === 'img') {
-            // Handle images
-            const imgSrc = element.getAttribute('src')?.replace(/&amp;/g, '&');
-            if (imgSrc) {
-              try {
-                console.log('Processing image:', imgSrc);
-                const imageData = await fetchImage(imgSrc);
-                
-                if (imageData) {
-                  let image;
-                  try {
-                    // Embed image based on type
-                    if (imageData.type.includes('png')) {
-                      image = await pdfDoc.embedPng(imageData.buffer);
-                    } else if (imageData.type.includes('jpeg') || imageData.type.includes('jpg')) {
-                      image = await pdfDoc.embedJpg(imageData.buffer);
-                    } else {
-                      throw new Error('Unsupported image type: ' + imageData.type);
-                    }
-
-                    // Calculate image dimensions
-                    const maxWidth = pdfConfig.maxWidth * 0.8;
-                    const imgDims = image.scale(1);
-                    let imgWidth = imgDims.width;
-                    let imgHeight = imgDims.height;
-
-                    // Scale down if too large
-                    if (imgWidth > maxWidth) {
-                      const scale = maxWidth / imgWidth;
-                      imgWidth = maxWidth;
-                      imgHeight = imgHeight * scale;
-                    }
-
-                    // Check if image fits on current page
-                    if (currentY - imgHeight - 20 < pdfConfig.margin) {
-                      const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-                      currentPage = newPage;
-                      currentY = newPage.getSize().height - pdfConfig.margin;
-                    }
-
-                    // Center image
-                    const xOffset = (currentPage.getSize().width - imgWidth) / 2;
-                    
-                    // Add spacing before image
-                    currentY -= pdfConfig.lineSpacing;
-                    
-                    // Draw image
-                    currentPage.drawImage(image, {
-                      x: xOffset,
-                      y: currentY - imgHeight,
-                      width: imgWidth,
-                      height: imgHeight,
-                    });
-
-                    // Update position after image with INCREASED spacing
-                    currentY = currentY - imgHeight - pdfConfig.paragraphSpacing - 15;
-                    
-                    console.log('Image added successfully');
-                  } catch (embedError) {
-                    console.error('Error embedding image:', embedError);
-                    // Add placeholder for failed image
-                    const result = drawWrappedText(
-                      '[Image could not be loaded]',
-                      timesItalicFont,
-                      10,
-                      pdfConfig.margin,
-                      currentY,
-                      currentPage
-                    );
-                    currentY = result.y;
-                    currentPage = result.page;
-                  }
-                } else {
-                  console.error('Failed to load image data');
-                }
-              } catch (error) {
-                console.error('Error processing image:', error);
-              }
-              continue;
-            }
-          } else {
-            // Handle text elements
-            let text = element.textContent?.trim() || '';
-            if (!text) continue;
-
-            let font = timesRomanFont;
-
-            // Process text element based on tag type
-            switch (tagName) {
-              case 'h1':
-                currentY -= pdfConfig.fonts.h1.spacing;
-                const h1Result = drawWrappedText(
-                  text, 
-                  timesBoldFont, 
-                  pdfConfig.fonts.h1.size, 
-                  pdfConfig.margin, 
-                  currentY,
-                  currentPage
-                );
-                currentY = h1Result.y;
-                currentPage = h1Result.page;
-                currentY -= pdfConfig.headerSpacing;
-                break;
-
-              case 'h2':
-                currentY -= pdfConfig.fonts.h2.spacing;
-                text = cleanHeadingText(text, i);
-                const h2Result = drawWrappedText(
-                  text, 
-                  timesBoldFont, 
-                  pdfConfig.fonts.h2.size, 
-                  pdfConfig.margin, 
-                  currentY,
-                  currentPage
-                );
-                currentY = h2Result.y;
-                currentPage = h2Result.page;
-                currentY -= pdfConfig.headerSpacing;
-                break;
-
-              case 'h3':
-              case 'h4':
-              case 'h5':
-              case 'h6':
-                currentY -= pdfConfig.fonts.h3.spacing;
-                const h3Result = drawWrappedText(
-                  text, 
-                  timesBoldFont, 
-                  pdfConfig.fonts.h3.size, 
-                  pdfConfig.margin, 
-                  currentY,
-                  currentPage
-                );
-                currentY = h3Result.y;
-                currentPage = h3Result.page;
-                currentY -= pdfConfig.headerSpacing;
-                break;
-
-              case 'p':
-                // Apply special formatting if needed
-                if (element.querySelector('strong')) {
-                  font = timesBoldFont;
-                } else if (element.querySelector('em')) {
-                  font = timesItalicFont;
-                }
-                
-                currentY -= pdfConfig.fonts.p.spacing;
-                const pResult = drawWrappedText(
-                  text, 
-                  font, 
-                  pdfConfig.fonts.p.size, 
-                  pdfConfig.margin, 
-                  currentY,
-                  currentPage
-                );
-                currentY = pResult.y;
-                currentPage = pResult.page;
-                currentY -= pdfConfig.paragraphSpacing;
-                break;
-
-              case 'ul':
-              case 'ol':
-                currentY -= pdfConfig.fonts.list.spacing;
-                
-                // Process each list item
-                const listItems = element.querySelectorAll('li');
-                for (let j = 0; j < listItems.length; j++) {
-                  const li = listItems[j];
-                  const bullet = tagName === 'ul' ? '•' : `${j + 1}.`;
-                  const listText = `${bullet} ${li.textContent?.trim()}`;
-                  
-                  // Check if list item might need a new page
-                  if (currentY < pdfConfig.margin + 30) {
-                    const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
-                    currentPage = newPage;
-                    currentY = newPage.getSize().height - pdfConfig.margin;
-                  }
-                  
-                  const liResult = drawWrappedText(
-                    listText, 
-                    timesRomanFont, 
-                    pdfConfig.fonts.list.size, 
-                    pdfConfig.margin, 
-                    currentY,
-                    currentPage,
-                    pdfConfig.fonts.list.indent
-                  );
-                  currentY = liResult.y;
-                  currentPage = liResult.page;
-                  
-                  currentY -= pdfConfig.fonts.list.spacing;
-                }
-                
-                currentY -= pdfConfig.paragraphSpacing;
-                break;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing chapter ${i + 1}:`, error);
-      }
-    }
-
-    // --- ADD PAGE NUMBERS ---
-    // Skip page numbers on title and cover pages
-    const pageNumberStartIndex = hasCover ? 2 : 1; // Skip title page and cover page (if exists)
-    
-    for (let i = pageNumberStartIndex; i < pdfDoc.getPageCount(); i++) {
-      const page = pdfDoc.getPage(i);
-      const pageNum = `${i - pageNumberStartIndex + 1}`;
-      const pageNumWidth = timesRomanFont.widthOfTextAtSize(pageNum, 10);
-      page.drawText(pageNum, {
-        x: (pdfConfig.pageWidth - pageNumWidth) / 2,
-        y: pdfConfig.margin / 2,
-        size: 10,
-        font: timesRomanFont,
-        color: rgb(0.5, 0.5, 0.5),
-      });
-    }
-
-    // --- SAVE AND DOWNLOAD PDF ---
-    console.log("Generating final PDF...");
-    const pdfBytes:any = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${row["Course Title"].replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success("PDF downloaded successfully");
 
   } catch (error) {
-    console.error("PDF generation error:", error);
-    toast.error("Error generating PDF");
+    console.error(`${format.toUpperCase()} generation error:`, error);
+    toast.error(`Error generating ${format.toUpperCase()}`);
   } finally {
     setLoading(false);
   }
 };
 
-export const downloadDocx = async (row: any, setLoading: any) => {
-setLoading(true) 
-try {
-  const repsonse = await apiService.post('/download-content/asDocx',{
-    content:row
-  })
-  if(repsonse.success){
-    const byteCharacters = atob(repsonse.buffer); // 🔥 Decode base64
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${row["Course Title"].replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
-    document.body.appendChild(link);
-    link.click();
-  }else{
-    toast.error(repsonse.message);
-  }
- } catch (error) {
-  toast.error('Something went wrong');
- } finally{
-  setLoading(false)
- }
+// Generate DOCX from processed content
+const generateDocx = async (processedContent: any, setLoading: any) => {
+  const { chapters, hasCover, coverData, courseTitle } = processedContent;
+  
+  let sections = [];
 
+  // --- TITLE PAGE ---
+  sections.push({
+    properties: {
+      page: {
+        margin: {
+          top: 1440, // 1 inch = 1440 twips
+          right: 1440,
+          bottom: 1440,
+          left: 1440,
+        },
+      },
+    },
+    headers: {
+      default: new Header({
+        children: [new Paragraph("")],
+      }),
+    },
+    footers: {
+      default: new Footer({
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                children: [PageNumber.CURRENT],
+                size: 20,
+              }),
+            ],
+          }),
+        ],
+      }),
+    },
+    children: [
+      new Paragraph({
+        text: "Mini Lesson Academy",
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+        run: {
+          size: 48,
+          color: "650AAA",
+          bold: true,
+        },
+      }),
+      new Paragraph({
+        text: courseTitle,
+        heading: HeadingLevel.HEADING_1,
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 300, after: 400 },
+        run: {
+          size: 36,
+          bold: true,
+        },
+      }),
+      new Paragraph({
+        text: new Date().toLocaleDateString(),
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200 },
+        run: {
+          size: 24,
+          color: "666666",
+        },
+      }),
+    ],
+  });
+
+  // --- COVER PAGE ---
+  if (hasCover && coverData) {
+    console.log('Processing cover for DOCX...');
+    try {
+      const coverBuffer = await fetchImageBuffer(coverData.src);
+      
+      if (coverBuffer && coverBuffer.byteLength > 0) {
+        sections.push({
+          properties: {
+            page: {
+              margin: {
+                top: 1440,
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
+          headers: {
+            default: new Header({
+              children: [new Paragraph("")],
+            }),
+          },
+          footers: {
+            default: new Footer({
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      children: [PageNumber.CURRENT],
+                      size: 20,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          },
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 2000, after: 1000 },
+              children: [
+                new ImageRun({
+                  data: coverBuffer,
+                  type: "png", // Assuming PNG, could be determined from image type
+                  transformation: {
+                    width: 450,
+                    height: 300,
+                  },
+                }),
+              ],
+            }),
+          ],
+        });
+        console.log('✅ Cover image added to DOCX');
+      }
+    } catch (error) {
+      console.error('❌ Error processing cover for DOCX:', error);
+    }
+  }
+
+  // --- PROCESS CHAPTERS ---
+  for (let i = 0; i < chapters.length; i++) {
+    console.log(`Processing chapter ${i + 1} for DOCX`);
+    
+    let chapterHtml = typeof chapters[i] === "object" ? chapters[i].content || "" : chapters[i];
+    let children = [];
+
+    // Parse HTML content using DOMParser for better extraction
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(chapterHtml, 'text/html');
+    
+    // Process all elements in order
+    const allElements = doc.body.querySelectorAll('*');
+    let processedImages = new Set();
+    
+    for (const element of allElements) {
+      const tagName = element.tagName.toLowerCase();
+      const textContent = element.textContent?.trim() || '';
+      
+      // Skip empty elements and already processed content
+      if (!textContent && tagName !== 'img') continue;
+      
+      switch (tagName) {
+        case 'h1':
+          children.push(
+            new Paragraph({
+              text: textContent,
+              heading: HeadingLevel.HEADING_1,
+              spacing: { before: 400, after: 200 },
+              run: {
+                size: 32,
+                bold: true,
+                color: "2C3E50",
+              },
+            })
+          );
+          break;
+
+        case 'h2':
+          children.push(
+            new Paragraph({
+              text: textContent,
+              heading: HeadingLevel.HEADING_2,
+              spacing: { before: 300, after: 150 },
+              run: {
+                size: 26,
+                bold: true,
+                color: "34495E",
+              },
+            })
+          );
+          break;
+
+        case 'h3':
+        case 'h4':
+        case 'h5':
+        case 'h6':
+          children.push(
+            new Paragraph({
+              text: textContent,
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 250, after: 120 },
+              run: {
+                size: 22,
+                bold: true,
+                color: "5D6D7E",
+              },
+            })
+          );
+          break;
+
+        case 'p':
+          if (textContent) {
+            // Check for formatting within paragraph
+            const hasStrong = element.querySelector('strong') !== null;
+            const hasEm = element.querySelector('em') !== null;
+            
+            children.push(
+              new Paragraph({
+                text: textContent,
+                spacing: { before: 120, after: 120 },
+                run: {
+                  size: 22,
+                  bold: hasStrong,
+                  italics: hasEm,
+                },
+              })
+            );
+          }
+          break;
+
+        case 'ul':
+        case 'ol':
+          const listItems = element.querySelectorAll('li');
+          listItems.forEach((li, index) => {
+            const listText = li.textContent?.trim() || '';
+            if (listText) {
+              children.push(
+                new Paragraph({
+                  text: listText,
+                  bullet: {
+                    level: 0,
+                  },
+                  spacing: { before: 80, after: 80 },
+                  run: {
+                    size: 22,
+                  },
+                })
+              );
+            }
+          });
+          break;
+
+        case 'img':
+          const imgSrc = element.getAttribute('src');
+          if (imgSrc && !processedImages.has(imgSrc)) {
+            processedImages.add(imgSrc);
+            console.log(`Processing image for DOCX: ${imgSrc.substring(0, 100)}...`);
+      
+            try {
+              const imgBuffer = await fetchImageBuffer(imgSrc);
+              if (imgBuffer && imgBuffer.byteLength > 0) {
+                children.push(
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 200, after: 200 },
+                    children: [
+                      new ImageRun({
+                        data: imgBuffer,
+                        type: "png", // Assuming PNG, could be determined from image type
+                        transformation: {
+                          width: 400,
+                          height: 250,
+                        },
+                      }),
+                    ],
+                  })
+                );
+                console.log(`✅ Image added to DOCX successfully (${imgBuffer.byteLength} bytes)`);
+              } else {
+                console.log(`❌ Failed to fetch image, adding placeholder`);
+                children.push(
+                  new Paragraph({
+                    text: "[Image could not be loaded]",
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 200, after: 200 },
+                    run: {
+                      italics: true,
+                      color: "999999",
+                      size: 20,
+                    },
+                  })
+                );
+              }
+            } catch (error) {
+              console.error(`❌ Error processing image:`, error);
+              children.push(
+                new Paragraph({
+                  text: "[Image processing error]",
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 200, after: 200 },
+                  run: {
+                    italics: true,
+                    color: "FF0000",
+                    size: 20,
+                  },
+                })
+              );
+            }
+          }
+          break;
+      }
+    }
+
+    // Add chapter as a new section with page numbers
+    sections.push({
+      properties: {
+        page: {
+          margin: {
+            top: 1440,
+            right: 1440,
+            bottom: 1440,
+            left: 1440,
+          },
+        },
+      },
+      headers: {
+        default: new Header({
+          children: [new Paragraph("")],
+        }),
+      },
+      footers: {
+        default: new Footer({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  children: [PageNumber.CURRENT],
+                  size: 20,
+                }),
+              ],
+            }),
+          ],
+        }),
+      },
+      children: children.length > 0 ? children : [
+        new Paragraph({
+          text: `Chapter ${i + 1}`,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 },
+        }),
+        new Paragraph({
+          text: "",
+          run: {
+            italics: true,
+            color: "999999",
+          },
+        }),
+      ],
+    });
+  }
+
+  // Create and download DOCX
+  const doc = new Document({
+    creator: "Mini Lessons Academy",
+    title: courseTitle,
+    description: "Auto-generated course document",
+    styles: {
+      paragraphStyles: [
+        {
+          id: "Normal",
+          name: "Normal",
+          basedOn: "Normal",
+          next: "Normal",
+          run: {
+            size: 22,
+            font: "Calibri",
+          },
+          paragraph: {
+            spacing: {
+              line: 276, // 1.15 line spacing
+            },
+          },
+        },
+      ],
+    },
+    numbering: {
+      config: [
+        {
+          reference: "my-crazy-numbering",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.BULLET,
+              text: "•",
+              alignment: AlignmentType.LEFT,
+              style: {
+                paragraph: {
+                  indent: { left: 720, hanging: 260 },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    sections,
+  });
+
+  const buffer = await Packer.toBlob(doc);
+  
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(buffer);
+  link.download = `${courseTitle}.docx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast.success("DOCX downloaded successfully");
+};
+
+// Generate PDF from processed content (your existing PDF logic)
+const generatePdf = async (processedContent: any, setLoading: any) => {
+  const { chapters, hasCover, coverData, courseTitle } = processedContent;
+
+  // Create PDF document with NO pages initially
+  const pdfDoc = await PDFDocument.create();
+  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const timesBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const timesItalicFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+  // --- CREATE TITLE PAGE (FIRST PAGE) ---
+  const titlePage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+  const { width: pageWidth, height: pageHeight } = titlePage.getSize();
+  
+  // Draw "Mini Lesson Academy" title centered on first page
+  const titleText = "Mini Lesson Academy";
+  const titleFontSize = 32;
+  const titleWidth = timesBoldFont.widthOfTextAtSize(titleText, titleFontSize);
+  
+  titlePage.drawText(titleText, {
+    x: (pageWidth - titleWidth) / 2,
+    y: pageHeight * 0.6, // Position it above center
+    size: titleFontSize,
+    font: timesBoldFont,
+    color: rgb(0.39, 0.04, 0.67), // Purple color (#650AAA)
+  });
+
+  // Draw course title below the main title
+  const courseTitleLines = splitTextIntoLines(courseTitle, timesBoldFont, 22, pdfConfig.maxWidth * 0.8);
+  
+  let courseTitleY = pageHeight * 0.5;
+  courseTitleLines.forEach(line => {
+    const lineWidth = timesBoldFont.widthOfTextAtSize(line, 22);
+    titlePage.drawText(line, {
+      x: (pageWidth - lineWidth) / 2,
+      y: courseTitleY,
+      size: 22,
+      font: timesBoldFont,
+      color: rgb(0, 0, 0),
+    });
+    courseTitleY -= 22 * 1.7; // Increased spacing here
+  });
+
+  // Draw date at bottom
+  const dateText = new Date().toLocaleDateString();
+  titlePage.drawText(dateText, {
+    x: (pageWidth - timesRomanFont.widthOfTextAtSize(dateText, 12)) / 2,
+    y: pageHeight * 0.1,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+
+  // --- COVER PAGE ---
+  if (hasCover && coverData) {
+    console.log('Processing cover for PDF...');
+    try {
+      // Add cover page as the SECOND page
+      const coverPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+      const coverSuccess = await processCoverPage(coverPage, coverData.content, pdfDoc, courseTitle);
+      
+      if (!coverSuccess) {
+        // If cover processing failed, remove the page
+        pdfDoc.removePage(1); // Remove the second page (index 1)
+      }
+    } catch (error) {
+      console.error('❌ Error processing cover for PDF:', error);
+    }
+  }
+
+  // --- IMPROVED TEXT WRAPPING FUNCTION ---
+  const drawWrappedText = (text: string, font: any, fontSize: number, startX: number, startY: number, currentPage: PDFPage, indent = 0) => {
+    if (!text || text.trim() === '') return { y: startY, page: currentPage };
+    
+    const words = text.trim().split(' ');
+    let currentLine = '';
+    let currentY = startY;
+    let page = currentPage;
+
+    // Calculate line height based on font size - INCREASED for better spacing
+    const lineHeight = fontSize * 1.6; // Increased from 1.3 to 1.6
+
+    const drawLine = (line: string, y: number) => {
+      if (!line.trim()) return y;
+      
+      // Don't draw text if it would be off-page - increased margin
+      if (y < pdfConfig.margin + fontSize + 5) {
+        return y;
+      }
+      
+      page.drawText(line.trim(), {
+        x: startX + indent,
+        y,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      
+      // Return the position after drawing the line with increased spacing
+      return y - lineHeight;
+    };
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+      if (lineWidth > pdfConfig.maxWidth - indent) {
+        // Draw current line and move down
+        currentY = drawLine(currentLine, currentY);
+        currentLine = word;
+
+        // Check if we need a new page - increase threshold for new page
+        if (currentY < pdfConfig.margin + fontSize + 10) {
+          const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+          page = newPage;
+          currentY = page.getSize().height - pdfConfig.margin;
+        }
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    // Draw the last line if there is one
+    if (currentLine.trim()) {
+      currentY = drawLine(currentLine, currentY);
+    }
+
+    // Add some extra space after text block
+    currentY -= fontSize * 0.3;
+
+    return { y: currentY, page };
+  };
+
+  // --- PROCESS CHAPTERS WITH ENHANCED FORMATTING ---
+  let currentPage = null;
+  let currentY = 0;
+  
+  for (let i = 0; i < chapters.length; i++) {
+    console.log(`Processing chapter ${i + 1} for PDF`);
+    
+    // Create a new page for each chapter
+    const chapterPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+    currentPage = chapterPage;
+    currentY = chapterPage.getSize().height - pdfConfig.margin;
+    
+    // Process chapter content
+    try {
+      const parser = new DOMParser();
+      const chapterContent = cleanHtmlContent(chapters[i]);
+      const doc = parser.parseFromString(chapterContent, 'text/html');
+
+      // Add chapter spacing
+      currentY -= pdfConfig.chapterSpacing;
+
+      // Find main elements to process
+      const elements = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p, ul, ol, img');
+      
+      if (elements.length === 0) {
+        // If this chapter has no content, remove the page to avoid empty pages
+        pdfDoc.removePage(pdfDoc.getPageCount() - 1);
+        continue;
+      }
+      
+      for (const element of elements) {
+        const tagName = element.tagName.toLowerCase();
+        
+        // Estimate element height for page break calculation - INCREASED heights
+        let estimatedElementHeight = 0;
+        if (tagName === 'img') {
+          estimatedElementHeight = 450; // Increased estimate for images
+        } else if (tagName.startsWith('h')) {
+          estimatedElementHeight = 50; // Increased estimate for headings
+        } else {
+          estimatedElementHeight = 20; // Increased estimate for paragraphs/lists
+        }
+        
+        // Create a new page if this element likely won't fit
+        if (currentY - estimatedElementHeight < pdfConfig.margin) {
+          const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+          currentPage = newPage;
+          currentY = newPage.getSize().height - pdfConfig.margin;
+        }
+
+        // Process the element based on its type
+        if (tagName === 'img') {
+          // Handle images
+          const imgSrc = element.getAttribute('src')?.replace(/&amp;/g, '&');
+          if (imgSrc) {
+            try {
+              console.log('Processing image for PDF:', imgSrc.substring(0, 100) + '...');
+              const imageData = await fetchImage(imgSrc);
+              
+              if (imageData) {
+                let image;
+                try {
+                  // Embed image based on type
+                  if (imageData.type.includes('png')) {
+                    image = await pdfDoc.embedPng(imageData.buffer);
+                  } else if (imageData.type.includes('jpeg') || imageData.type.includes('jpg')) {
+                    image = await pdfDoc.embedJpg(imageData.buffer);
+                  } else {
+                    throw new Error('Unsupported image type: ' + imageData.type);
+                  }
+
+                  // Calculate image dimensions
+                  const maxWidth = pdfConfig.maxWidth * 0.8;
+                  const imgDims = image.scale(1);
+                  let imgWidth = imgDims.width;
+                  let imgHeight = imgDims.height;
+
+                  // Scale down if too large
+                  if (imgWidth > maxWidth) {
+                    const scale = maxWidth / imgWidth;
+                    imgWidth = maxWidth;
+                    imgHeight = imgHeight * scale;
+                  }
+
+                  // Check if image fits on current page
+                  if (currentY - imgHeight - 20 < pdfConfig.margin) {
+                    const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+                    currentPage = newPage;
+                    currentY = newPage.getSize().height - pdfConfig.margin;
+                  }
+
+                  // Center image
+                  const xOffset = (currentPage.getSize().width - imgWidth) / 2;
+                  
+                  // Add spacing before image
+                  currentY -= pdfConfig.lineSpacing;
+                  
+                  // Draw image
+                  currentPage.drawImage(image, {
+                    x: xOffset,
+                    y: currentY - imgHeight,
+                    width: imgWidth,
+                    height: imgHeight,
+                  });
+
+                  // Update position after image with INCREASED spacing
+                  currentY = currentY - imgHeight - pdfConfig.paragraphSpacing - 15;
+                  
+                  console.log('✅ Image added to PDF successfully');
+                } catch (embedError) {
+                  console.error('❌ Error embedding image:', embedError);
+                  // Add placeholder for failed image
+                  const result = drawWrappedText(
+                    '[Image could not be loaded]',
+                    timesItalicFont,
+                    10,
+                    pdfConfig.margin,
+                    currentY,
+                    currentPage
+                  );
+                  currentY = result.y;
+                  currentPage = result.page;
+                }
+              } else {
+                console.error('❌ Failed to load image data');
+              }
+            } catch (error) {
+              console.error('❌ Error processing image:', error);
+            }
+            continue;
+          }
+        } else {
+          // Handle text elements
+          let text = element.textContent?.trim() || '';
+          if (!text) continue;
+
+          let font = timesRomanFont;
+
+          // Process text element based on tag type
+          switch (tagName) {
+            case 'h1':
+              currentY -= pdfConfig.fonts.h1.spacing;
+              const h1Result = drawWrappedText(
+                text, 
+                timesBoldFont, 
+                pdfConfig.fonts.h1.size, 
+                pdfConfig.margin, 
+                currentY,
+                currentPage
+              );
+              currentY = h1Result.y;
+              currentPage = h1Result.page;
+              currentY -= pdfConfig.headerSpacing;
+              break;
+
+            case 'h2':
+              currentY -= pdfConfig.fonts.h2.spacing;
+              text = cleanHeadingText(text, i);
+              const h2Result = drawWrappedText(
+                text, 
+                timesBoldFont, 
+                pdfConfig.fonts.h2.size, 
+                pdfConfig.margin, 
+                currentY,
+                currentPage
+              );
+              currentY = h2Result.y;
+              currentPage = h2Result.page;
+              currentY -= pdfConfig.headerSpacing;
+              break;
+
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+              currentY -= pdfConfig.fonts.h3.spacing;
+              const h3Result = drawWrappedText(
+                text, 
+                timesBoldFont, 
+                pdfConfig.fonts.h3.size, 
+                pdfConfig.margin, 
+                currentY,
+                currentPage
+              );
+              currentY = h3Result.y;
+              currentPage = h3Result.page;
+              currentY -= pdfConfig.headerSpacing;
+              break;
+
+            case 'p':
+              // Apply special formatting if needed
+              if (element.querySelector('strong')) {
+                font = timesBoldFont;
+              } else if (element.querySelector('em')) {
+                font = timesItalicFont;
+              }
+              
+              currentY -= pdfConfig.fonts.p.spacing;
+              const pResult = drawWrappedText(
+                text, 
+                font, 
+                pdfConfig.fonts.p.size, 
+                pdfConfig.margin, 
+                currentY,
+                currentPage
+              );
+              currentY = pResult.y;
+              currentPage = pResult.page;
+              currentY -= pdfConfig.paragraphSpacing;
+              break;
+
+            case 'ul':
+            case 'ol':
+              currentY -= pdfConfig.fonts.list.spacing;
+              
+              // Process each list item
+              const listItems = element.querySelectorAll('li');
+              for (let j = 0; j < listItems.length; j++) {
+                const li = listItems[j];
+                const bullet = tagName === 'ul' ? '•' : `${j + 1}.`;
+                const listText = `${bullet} ${li.textContent?.trim()}`;
+                
+                // Check if list item might need a new page
+                if (currentY < pdfConfig.margin + 30) {
+                  const newPage = pdfDoc.addPage([pdfConfig.pageWidth, pdfConfig.pageHeight]);
+                  currentPage = newPage;
+                  currentY = newPage.getSize().height - pdfConfig.margin;
+                }
+                
+                const liResult = drawWrappedText(
+                  listText, 
+                  timesRomanFont, 
+                  pdfConfig.fonts.list.size, 
+                  pdfConfig.margin, 
+                  currentY,
+                  currentPage,
+                  pdfConfig.fonts.list.indent
+                );
+                currentY = liResult.y;
+                currentPage = liResult.page;
+                
+                currentY -= pdfConfig.fonts.list.spacing;
+              }
+              
+              currentY -= pdfConfig.paragraphSpacing;
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Error processing chapter ${i + 1}:`, error);
+    }
+  }
+
+  // --- ADD PAGE NUMBERS ---
+  // Skip page numbers on title and cover pages
+  const pageNumberStartIndex = hasCover ? 2 : 1; // Skip title page and cover page (if exists)
+  
+  for (let i = pageNumberStartIndex; i < pdfDoc.getPageCount(); i++) {
+    const page = pdfDoc.getPage(i);
+    const pageNum = `${i - pageNumberStartIndex + 1}`;
+    const pageNumWidth = timesRomanFont.widthOfTextAtSize(pageNum, 10);
+    page.drawText(pageNum, {
+      x: (pdfConfig.pageWidth - pageNumWidth) / 2,
+      y: pdfConfig.margin / 2,
+      size: 10,
+      font: timesRomanFont,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+  }
+
+  // --- SAVE AND DOWNLOAD PDF ---
+  console.log("Generating final PDF...");
+  const pdfBytes = await pdfDoc.save();
+  
+  // Create PDF blob and download
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${courseTitle}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  toast.success("PDF downloaded successfully");
 };
 
 
@@ -882,59 +1402,17 @@ export const formatSharedContent = (content: any, title: string, type: 'course' 
 //   return false;
 // });
 
-const coverIndex = chapters.findIndex((ch: any, index:any) => {
-  // Convert to string if it's an object
-  const chapterContent = typeof ch === 'object' && ch.content 
-    ? ch.content 
-    : (typeof ch === 'object' ? JSON.stringify(ch) : ch);
-  
-  // Primary cover signals
-  const hasCoverClass = chapterContent.includes('book-cover-image');
-  const hasCoverAttribute = chapterContent.includes('data-cover="true"');
-  
-  // Secondary cover signals (Quill classes with images)
-  const hasQuillImage = chapterContent.includes('p class="ql') && 
-                        chapterContent.includes('<img');
-  
-  // Context signals that suggest this is a cover page
-  const isTitleChapter = chapterContent.includes('<h1>Cover</h1>') || 
-                         chapterContent.includes('<h1>Title</h1>') ||
-                         chapterContent.includes('<h1>Book Cover</h1>');
-  const isFirstChapter = index === 0;
-  
-  // Check for simple image-only chapter (likely a cover)
-  let isSimpleImageChapter = false;
-  if (chapterContent.includes('<img')) {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(chapterContent, 'text/html');
-      isSimpleImageChapter = (
-        doc.body.children.length <= 2 && 
-        doc.body.querySelector('img') !== null &&
-        doc.body.querySelector('h1') === null
-      );
-    } catch (e) {
-      console.error('Error parsing chapter content:', e);
-    }
-  }
-  
-  // Primary signals are strongest
-  if (hasCoverClass || hasCoverAttribute) {
-    return true;
-  }
-  
-  // Secondary signals combined with context are good indicators
-  if (hasQuillImage && (isTitleChapter || isFirstChapter)) {
-    return true;
-  }
-  
-  // Simple image-only chapter is likely a cover, especially if it's the first chapter
-  if (isSimpleImageChapter && (isFirstChapter || index < 2)) {
-    return true;
-  }
-  
-  return false;
-});
+const coverIndex = chapters.findIndex((ch: any) =>
+  typeof ch === 'string' && (
+    ch.includes('book-cover-image') || 
+    ch.includes('data-cover="true"')
+  ) || (
+    typeof ch === 'object' && ch.content && (
+      ch.content.includes('book-cover-image') ||
+      ch.content.includes('data-cover="true"')
+    )
+  )
+);
 
 let coverHtml = '';
 if (coverIndex >= 0) {
@@ -2018,3 +2496,12 @@ function cleanHeadingText(text: string, chapterNumber?: number): string {
   
   return cleaned;
 }
+
+// Convenience functions for specific formats
+export const downloadPdf = async (row: any, setLoading: any) => {
+  return downloadItem(row, setLoading, 'pdf');
+};
+
+export const downloadDocxFromItem = async (row: any, setLoading: any) => {
+  return downloadItem(row, setLoading, 'docx');
+};

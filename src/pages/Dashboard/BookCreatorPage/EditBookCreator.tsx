@@ -43,7 +43,6 @@ import ImageGallery from "../../../components/AiToolForms/BookCreator/ImageGalle
 import AdminModel from "../../../components/AdminModel";
 import ChapterQuizDisplay from "../../../components/ChapterQuizDisplay";
 import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
-// import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
 
 interface QuillEditor {
   getContents: () => Delta;

@@ -45,7 +45,6 @@ import BackButton from "../../../components/ui/BackButton";
 import ImageGallery from "../../../components/AiToolForms/BookCreator/ImageGallery";
 import AdminModel from "../../../components/AdminModel";
 import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
-// import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
 
 interface QuillEditor {
   getContents: () => Delta;
