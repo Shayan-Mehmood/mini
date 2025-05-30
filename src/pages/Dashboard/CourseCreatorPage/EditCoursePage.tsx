@@ -44,6 +44,8 @@ import { QuizDisplay } from "../../../components/QuizDisplay";
 import BackButton from "../../../components/ui/BackButton";
 import ImageGallery from "../../../components/AiToolForms/BookCreator/ImageGallery";
 import AdminModel from "../../../components/AdminModel";
+import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
+// import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
 
 interface QuillEditor {
   getContents: () => Delta;
@@ -113,6 +115,224 @@ const EditCoursePage = () => {
   // const toggleQuizModal = () => setOpenQuizModal(!OpenQuizModal);
   // const toggleAdminModel = () => setOpenAdminModel(!OpenAdminModal);
 
+  
+const {
+    isFirstView,
+    isChecking,
+    isGenerating,
+    generatedImage,
+    error: imageGeneration,
+    manuallyGenerateImage
+  } = useFirstViewImageGeneration(id);
+
+
+// Add a single useEffect to automatically apply the cover image when it's available from the hook
+useEffect(() => {
+  // Skip if any of these conditions are met:
+  // - No course ID
+  // - Loading state
+  // - Already in the middle of an operation
+  if (!id || loading || operationInProgress) {
+    return;
+  }
+
+  // Skip if we already have a cover image
+  const hasCover = chapters.some((chapter: any) => 
+    typeof chapter === 'string' 
+      ? isCoverChapter(chapter) 
+      : chapter?.content && isCoverChapter(chapter.content)
+  );
+
+  // If this is the first view and we have a generated image URL, apply it as cover
+  if (isFirstView && generatedImage && !hasCover) {
+    console.log("Auto-applying generated cover image:", generatedImage);
+    
+    // Use a special silent version for auto-generated covers
+    handleAddCoverImageSilently(generatedImage);
+  }
+}, [id, isFirstView, generatedImage, loading, chapters, operationInProgress]);
+
+// Silent version of handleAddCoverImage without toasts for automatic generation
+const handleAddCoverImageSilently = async (imageUrl: string) => {
+  setImageGallery(false);
+  if(coverMode) {
+    setCoverMode(false);
+  }
+  
+  return performOperation(
+    "adding_cover",
+    async () => {
+      const coverContent = generateCoverContent(imageUrl);
+      
+      // Check if we already have a cover
+      const existingCoverIndex = chapters.findIndex((chapter:any) => 
+        typeof(chapter) === 'string' 
+          ? isCoverChapter(chapter) 
+          : chapter?.content && isCoverChapter(chapter.content)
+      );
+      
+      const hadCover = existingCoverIndex !== -1;
+      
+      // Determine if we're currently on the cover
+      const wasOnCover = selectedChapterIndex === existingCoverIndex && hadCover;
+      
+      // Remember which actual chapter content we're currently editing
+      const currentChapterContent = selectedChapter;
+      const currentTitle = selectedChapterTitle;
+      
+      // Remove any existing cover chapter
+      let updatedChapters = [...chapters].filter(
+        (chapter:any) => typeof(chapter)==='string' 
+          ? !isCoverChapter(chapter) 
+          : !isCoverChapter(chapter.content) 
+      );
+      
+      // Find what "real" chapter index we're on (ignoring cover)
+      const realChapterIndex = hadCover && selectedChapterIndex > existingCoverIndex 
+        ? selectedChapterIndex - 1  // Adjust if we had a cover
+        : selectedChapterIndex;     // Otherwise use current index
+      
+      // Insert the new cover as the first item
+      updatedChapters.unshift({
+        title: "Cover Image",
+        content: coverContent
+      } as any);
+      
+      // Save to server
+      const response = await apiService.post(
+        `/course-creator/updateCourse/${id}/course`,
+        {
+          content: JSON.stringify(updatedChapters),
+        }
+      );
+      
+      if (!response.success) {
+        throw new Error("Failed to save cover");
+      }
+      
+      // Update chapters state
+      setChapters(updatedChapters);
+      
+      // Update selection state
+      if (wasOnCover || selectedChapterIndex === -1) {
+        // If we were on a cover or had nothing selected, select the new cover
+        setSelectedChapterIndex(0);
+        setSelectedChapter(coverContent);
+        setSelectedChapterTitle("Cover Image");
+      } else {
+        // Otherwise, adjust our index to stay on the same content chapter
+        const newIndex = realChapterIndex + 1; // +1 for the new cover
+        
+        if (newIndex < updatedChapters.length) {
+          setSelectedChapterIndex(newIndex);
+          
+          // Make sure the chapter content display is correct
+          const newChapter = updatedChapters[newIndex] as any;
+          if (typeof newChapter === 'object' && newChapter.content) {
+            // Don't change content if we're staying on the same chapter
+            // This preserves any unsaved edits the user was making
+            if (newChapter.content !== currentChapterContent) {
+              setSelectedChapter(newChapter.content);
+            }
+            setSelectedChapterTitle(newChapter.title || "");
+          } else if (typeof newChapter === 'string') {
+            if (newChapter !== currentChapterContent) {
+              setSelectedChapter(newChapter);
+            }
+            setSelectedChapterTitle("");
+          }
+        }
+      }
+      
+      return true;
+    },
+    {
+      showToast: false, // No toast for automatic generation
+      successMessage: "", 
+      errorMessage: ""
+    }
+  );
+};
+
+
+
+// to show when auto-cover generation is in progress
+const AutoCoverIndicator = () => {
+  // Ref to track if we've shown the success message
+  const successShownRef = useRef(false);
+  
+  // Reset indicator if not in first view
+  if (!isFirstView) return null;
+  
+  // Auto-hide success message after a delay
+  useEffect(() => {
+    if (generatedImage && !successShownRef.current) {
+      successShownRef.current = true;
+      
+      // Hide the success indicator after 5 seconds
+      const timer = setTimeout(() => {
+        successShownRef.current = false;
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [generatedImage]);
+  
+  if (isGenerating) {
+    return (
+      <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md flex items-center gap-3 animate-pulse">
+        <div className="shrink-0 w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        <div>
+          <p className="text-sm font-medium text-purple-700">Generating course cover...</p>
+          <p className="text-xs text-purple-600">We're creating a beautiful cover for your course</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (generatedImage && successShownRef.current) {
+    return (
+      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md flex items-center gap-3 animate-fadeIn">
+        <div className="shrink-0 w-6 h-6 text-green-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-green-700">Cover created successfully!</p>
+          <p className="text-xs text-green-600">An AI-generated cover has been added to your course</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isChecking) {
+    return (
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-3">
+        <div className="shrink-0 w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm text-blue-700">Checking if your course needs a cover...</p>
+      </div>
+    );
+  }
+
+  if (imageGeneration) {
+    return (
+      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-3">
+        <div className="shrink-0 w-6 h-6 text-amber-500">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-amber-700">Couldn't generate cover</p>
+          <p className="text-xs text-amber-600">{imageGeneration}</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return null;
+};
 
   const toggleQuizModal = () => {
   if (operationInProgress) {
@@ -1450,7 +1670,9 @@ isCoverChapter(
           </div>
           
         </div>
-
+<div className="hidden md:block">
+  <AutoCoverIndicator />
+</div>
 
         {/* Mobile toolbar with additional actions - appears below the editor */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white p-2 border-t border-purple-100 shadow-lg flex flex-wrap justify-around">
@@ -1567,6 +1789,9 @@ isCoverChapter(
             )}
           
         </div>
+        <div className="md:hidden mb-4">
+  <AutoCoverIndicator />
+</div>
 
         {/* Main editor area and sidebar container */}
         <div className="flex flex-col md:flex-row gap-4 mb-16 md:mb-0">
