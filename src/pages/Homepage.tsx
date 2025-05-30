@@ -67,7 +67,7 @@ const [isLoading, setIsLoading] = useState(false);
             
             // Redirect user to the external app with the token
             setTimeout(() => {
-              window.location.href = response.redirectUrl;
+              window.location.href = 'https://mini-ashen.vercel.app/';
             }, 800);
           } else {
             setError(response.message || 'Failed to generate access token');
