@@ -218,7 +218,7 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
                 margin: { top: 720, right: 720, bottom: 720, left: 720 },
               },
             },
-            children: docSections.map(section => [
+            children: docSections?.map(section => [
               new Paragraph({
                 children: [
                   new TextRun({

@@ -805,7 +805,7 @@ const handleResetFilters = (): void => {
                 onClick={handleSave}
                 className="p-2 bg-purple-600 text-white rounded-lg text-sm"
               >
-                {isCoverEdit ? "Update Cover" : "Apply"}
+                {isCoverEdit ? "Update Image" : "Apply"}
               </button>
             </div>
             

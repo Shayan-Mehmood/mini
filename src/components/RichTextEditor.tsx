@@ -188,51 +188,51 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
 
     // Enhanced modules configuration
     const modules = {
-      toolbar: {
-        container: [
-          [{ header: [1, 2, 3, false] }],
-          [{ font: [] }],
-          [{ size: ['small', false, 'large', 'huge'] }],
-          ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-          [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
-          [{ color: [] }, { background: [] }],
-          [{ align: ['', 'center', 'right', 'justify'] }],
-          ['link'],
-          ['clean'],
-        ],
+  toolbar: {
+    container: [
+      [{ header: [1, 2, 3, false] }],
+      [{ font: [] }],
+      [{ size: ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+      [{ color: [] }, { background: [] }],
+      [{ align: ['', 'center', 'right', 'justify'] }],
+      ['link'],
+      ['clean'],
+    ],
+  },
+  blotFormatter2: {
+    align: {
+      allowAligning: false,
+    },
+    image: {
+      allowAltTitleEdit: false
+    },
+    resize: {
+      allowResize: true,
+      handleStyle: {
+        backgroundColor: 'transparent',  // Changed from purple to transparent
+        border: '1px solid #ccc',        // More subtle border
+        borderRadius: '50%',
+        width: '10px',                  // Smaller handles
+        height: '10px'
       },
-      blotFormatter2: {
-        align: {
-          allowAligning: false,
-        },
-        image: {
-          allowAltTitleEdit: false
-        },
-        resize: {
-          allowResize: true,
-          handleStyle: {
-            backgroundColor: '#8b5cf6',
-            border: '2px solid white',
-            borderRadius: '50%',
-            width: '14px',
-            height: '14px'
-          },
-          throttle: 0, // Remove throttling for smoother resize
-        },
-        overlay: {
-          className: 'blot-formatter__overlay',
-          style: {
-            position: 'absolute',
-            boxSizing: 'border-box',
-            border: '2px solid #8b5cf6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)'
-          }
-        }
-      }, 
-      clipboard: {
-        matchVisual: false
+      throttle: 0,
+    },
+    overlay: {
+      className: 'blot-formatter__overlay',
+      style: {
+        position: 'absolute',
+        boxSizing: 'border-box',
+        border: 'none',                // Removed purple border
+        backgroundColor: 'transparent'  // Removed light purple background
       }
-    };
+    }
+  }, 
+  clipboard: {
+    matchVisual: false
+  }
+};
     
     // Add this CSS to your styles
     useEffect(() => {

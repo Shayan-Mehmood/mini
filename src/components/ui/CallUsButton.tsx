@@ -6,8 +6,10 @@ const CallUsButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const {pathname} = location;
-  const isEditPage = pathname.includes('/edit');
-  console.log(isEditPage,' ')
+  // /dashboard === true /dashboard/edit === false
+  // seperate string by / and check if theere are elements after /dashboard
+  const isDashboardPage = pathname.split('/').length <= 2;
+  console.log(pathname.split('/').length,' << ',isDashboardPage)
   const contactOptions = [
     {
       type: 'email',
@@ -86,7 +88,7 @@ const CallUsButton: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className={` bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-tl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${
           isOpen ? 'scale-95' : 'hover:scale-105'
-        } ${isEditPage ? 'hidden' : 'fixed'}`}
+        } ${isDashboardPage ? 'fixed' : 'hidden'}`}
         aria-label={isOpen ? 'Close contact options' : 'Open contact options'}
       >
         {isOpen ? (

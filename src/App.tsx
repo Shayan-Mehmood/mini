@@ -23,7 +23,6 @@ import AddCourseCreator from "./pages/Dashboard/CourseCreatorPage/AddCourseCreat
 import EditCoursePage from "./pages/Dashboard/CourseCreatorPage/EditCoursePage";
 import SharedContent from "./components/shared/SharedContent";
 import GlobalLoader from "./components/shared/GlobalLoader";
-import Home from "./pages/onboarding/Home";
 import "./App.css";
 import TokenHandler from "./components/TokenHandler";
 import AudioCreator from "./components/AudioCreator";
@@ -35,6 +34,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmailCampaign from "./pages/Dashboard/CourseCreatorPage/EmailCampaign";
 import AICoach from "./pages/Dashboard/AiCoach";
 import Profile from "./pages/Dashboard/Profile";
+import DocumentUploadCreator from "./components/ContentGeneration/DocumentUploadCreator";
+import QuickCourseCreator from "./components/ContentGeneration/QuickCourseCreator";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -232,12 +233,15 @@ function App() {
 
                
                 <Route path="/onboard" element={<OnboardingFlow />} />
+                {/* @ts-ignore */}
                 <Route path="/create" element={<ContentGenerationStepper />} />
                 <Route
                   path="/create/:contentType"
-                  element={<ContentGenerationStepper />}
+                  // @ts-ignore
+                  element={<ContentGenerationStepper />}  
                 />
-
+                <Route path="/create/by-document" element={<DocumentUploadCreator />} />
+                                <Route path="/create/one-click-creator" element={<QuickCourseCreator />} />
               </Route>
               <Route path="/shared/:type/:id" element={<SharedContent />} />
             </Route>

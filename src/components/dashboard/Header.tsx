@@ -13,7 +13,7 @@ const Header: React.FC = () => {
     { name: "AI Coach", to: "ai-tools" },
     // { name: "Marketing Resources", to: "https://minilessonsacademy.com/members-area/marketing-vip-resources-hub/" },
     { name: "Marketing Resources", to: "marketing-resources" },
-    { name: "Knowledgebase", to: "knowledgebase" },
+    { name: "Knowledgebase", to: "https://minilessonsacademy.com/members-area/knowledgebase/" },
   ]
 
   useEffect(() => {

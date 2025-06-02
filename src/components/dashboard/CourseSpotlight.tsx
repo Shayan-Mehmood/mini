@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SpotlightItem {
@@ -13,8 +13,11 @@ interface SpotlightItem {
 
 const CourseSpotlight: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [nextIndex, setNextIndex] = useState<number | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next');
+  const flipContainerRef = useRef<HTMLDivElement>(null);
 
   // Sample data with both courses and books
   const spotlightItems: SpotlightItem[] = [
@@ -156,170 +159,286 @@ const CourseSpotlight: React.FC = () => {
     }
   ];
 
-  // Auto-play functionality
-  
+  // Set up auto-rotation if enabled
+  useEffect(() => {
+    let interval: number | undefined;
+    if (isAutoPlaying) {
+      interval = window.setInterval(() => {
+        goToNext();
+      }, 6000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAutoPlaying, currentIndex]);
 
-  const handleSlideChange = (newIndexOrFunction: number | ((prev: number) => number)) => {
-    setIsFlipping(true);
+  const handleSlideChange = (newIndex: number, direction: 'next' | 'prev') => {
+    if (isFlipping) return;
     
+    setIsFlipping(true);
+    setFlipDirection(direction);
+    setNextIndex(newIndex);
+    
+    // Complete the transition after animation
     setTimeout(() => {
-      if (typeof newIndexOrFunction === 'function') {
-        setCurrentIndex(newIndexOrFunction);
-      } else {
-        setCurrentIndex(newIndexOrFunction);
-      }
+      setCurrentIndex(newIndex);
+      setNextIndex(null);
       setIsFlipping(false);
-    }, 300); // Half of the flip animation duration
+    }, 800); // Match this with the CSS animation duration
   };
 
   const goToPrevious = () => {
     setIsAutoPlaying(false);
     const newIndex = currentIndex === 0 ? spotlightItems.length - 1 : currentIndex - 1;
-    handleSlideChange(newIndex);
+    handleSlideChange(newIndex, 'prev');
   };
 
   const goToNext = () => {
     setIsAutoPlaying(false);
     const newIndex = currentIndex === spotlightItems.length - 1 ? 0 : currentIndex + 1;
-    handleSlideChange(newIndex);
+    handleSlideChange(newIndex, 'next');
   };
 
   const currentItem = spotlightItems[currentIndex];
+  const nextItem = nextIndex !== null ? spotlightItems[nextIndex] : null;
 
-  return (
-    <div className="py-12 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-white mb-4">Content Spotlight</h2>
-          <p className="text-xl text-purple-200">This Month's Spotlighted Courses</p>
+  const renderContentCard = (item: SpotlightItem, isBack: boolean = false) => {
+    return (
+      <div className="flex flex-col lg:flex-row h-full">
+        {/* Image Section */}
+        <div className="lg:w-1/2 relative overflow-hidden h-full lg:h-auto">
+          <img
+            src={item.image}
+            alt={item.title}
+            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
         </div>
 
-        {/* Main Spotlight Container */}
-        <div className="relative">
-          <div 
-            className={`bg-white rounded-2xl shadow-2xl overflow-hidden transition-transform duration-600 ${
-              isFlipping ? 'scale-x-0' : 'scale-x-100'
-            }`}
-            style={{ 
-              transformStyle: 'preserve-3d',
-              minHeight: '800px',
-              maxHeight: '900px'
-            }}
-          >
-            <div className="flex flex-col lg:flex-row h-full">
-              {/* Image Section */}
-              <div className="lg:w-1/2 relative overflow-hidden h-full">
-                <img
-                  src={currentItem.image}
-                  alt={currentItem.title}
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              </div>
+        {/* Content Section */}
+        <div className="lg:w-1/2 p-6 lg:p-12 flex flex-col justify-center space-y-6 lg:space-y-8">
+          {/* Content Type Badge */}
+          <div className="inline-block">
+            <span className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold rounded-full">
+              {item.type}
+            </span>
+          </div>
 
-              {/* Content Section */}
-              <div className="lg:w-1/2 p-8  lg:p-12 flex flex-col justify-center bg-gradient-to-br from-purple-50 to-white min-h-[800px] max-h-[900px]">
-                <div className="space-y-6">
-                  {/* Content Type Badge */}
-                  <div className="inline-block">
-                    <span className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-full">
-                      {currentItem.type}
-                    </span>
-                  </div>
+          {/* Title */}
+          <h3 className="text-2xl lg:text-4xl font-bold text-gray-800 leading-tight">
+            {item.title}
+          </h3>
 
-                  {/* Title */}
-                  <h3 className="text-3xl font-bold text-gray-900 leading-tight">
-                    {currentItem.title}
-                  </h3>
+          {/* Creator */}
+          <div>
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-2">
+              {item.type === 'Course' ? 'Creator' : 'Author'}
+            </h4>
+            <p className="text-gray-600 text-lg">{item.creator}</p>
+          </div>
 
-                  {/* Divider */}
-                  <div className="w-16 h-1 bg-purple-600 rounded"></div>
-
-                  {/* Creator */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                      {currentItem.type === 'Course' ? 'Creator' : 'Author'}
-                    </h4>
-                    <p className="text-gray-600">{currentItem.creator}</p>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="w-16 h-1 bg-purple-600 rounded"></div>
-
-                  {/* What's Inside */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                      What's inside the {currentItem.type.toLowerCase()}
-                    </h4>
-                    <ul className="space-y-2">
-                      {currentItem.whatsInside.map((item, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="text-purple-600 mr-2 mt-1">•</span>
-                          <span className="text-gray-700 text-sm leading-relaxed">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="w-16 h-1 bg-purple-600 rounded"></div>
-
-                  {/* Why We Love */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                      Why we love this {currentItem.type.toLowerCase()}
-                    </h4>
-                    <ul className="space-y-2">
-                      {currentItem.whyWeLove.map((item, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="text-purple-600 mr-2 mt-1">•</span>
-                          <span className="text-gray-700 text-sm leading-relaxed">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+          {/* What's Inside */}
+          <div>
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4">
+              What's inside the {item.type.toLowerCase()}
+            </h4>
+            <div className="space-y-3">
+              {item.whatsInside.map((point, index) => (
+                <p key={index} className="text-gray-700 leading-relaxed">
+                  {point}
+                </p>
+              ))}
             </div>
           </div>
 
-          {/* Navigation Arrows - Centered at Bottom */}
-          <div className="flex justify-center items-center mt-8 space-x-4">
-            <button
-              onClick={goToPrevious}
-              className="bg-white/90 hover:bg-white text-purple-600 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-              aria-label="Previous content"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-
-            <button
-              onClick={goToNext}
-              className="bg-white/90 hover:bg-white text-purple-600 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-              aria-label="Next content"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
+          {/* Why We Love */}
+          <div>
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4">
+              Why we love this {item.type.toLowerCase()}
+            </h4>
+            <div className="space-y-3">
+              {item.whyWeLove.map((point, index) => (
+                <p key={index} className="text-gray-700 leading-relaxed">
+                  {point}
+                </p>
+              ))}
+            </div>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="py-12 lg:py-20 bg-gradient-to-br from-orange-100 via-purple-100 to-pink-100 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-purple-200 rounded-full blur-xl"></div>
+        <div className="absolute bottom-10 right-10 w-32 h-32 bg-orange-200 rounded-full blur-xl"></div>
+        <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-pink-200 rounded-full blur-lg"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        {/* Header */}
+        <div className="text-center mb-8 lg:mb-16">
+          <h2 className="text-4xl lg:text-6xl font-bold text-gray-800 mb-4">
+            Course Spotlight
+          </h2>
+          <p className="text-xl lg:text-2xl text-gray-600">
+            This Months Spotlighted Courses
+          </p>
+        </div>
+
+        {/* Main Spotlight Container with Side Navigation */}
+        <div className="relative flex items-center justify-center">
+          {/* Left Navigation Arrow */}
+          <button
+            onClick={goToPrevious}
+            className="hidden lg:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-purple-600 p-4 rounded-full shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl"
+            aria-label="Previous content"
+          >
+            <ChevronLeft className="w-8 h-8" />
+          </button>
+
+          {/* Content Container with 3D Flip Animation */}
+          <div 
+            className="w-full max-w-6xl mx-auto perspective-1000"
+            style={{ perspective: '1000px' }}
+          >
+            <div 
+              ref={flipContainerRef}
+              className={`bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden transition-all duration-800 h-full ${
+                isFlipping ? (flipDirection === 'next' ? 'animate-flip-next' : 'animate-flip-prev') : ''
+              }`}
+              style={{ 
+                transformStyle: 'preserve-3d',
+                minHeight: '800px',
+              }}
+            >
+              {/* Front face - Current item */}
+              <div className={`absolute inset-0 backface-hidden ${isFlipping ? 'animate-fade-out' : ''}`}>
+                {renderContentCard(currentItem)}
+              </div>
+              
+              {/* Back face - Next item (only rendered during transition) */}
+              {nextItem && isFlipping && (
+                <div className="absolute inset-0 backface-hidden animate-fade-in" 
+                     style={{ transform: 'rotateY(180deg)' }}>
+                  {renderContentCard(nextItem, true)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Navigation Arrow */}
+          <button
+            onClick={goToNext}
+            className="hidden lg:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-purple-600 p-4 rounded-full shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-xl"
+            aria-label="Next content"
+          >
+            <ChevronRight className="w-8 h-8" />
+          </button>
+        </div>
+
+        {/* Mobile Navigation - Bottom arrows for smaller screens */}
+        <div className="flex lg:hidden justify-center items-center mt-8 space-x-4">
+          <button
+            onClick={goToPrevious}
+            className="bg-white/80 hover:bg-white text-purple-600 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+            aria-label="Previous content"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={goToNext}
+            className="bg-white/80 hover:bg-white text-purple-600 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+            aria-label="Next content"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
 
         {/* Bottom Section */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-12 lg:mt-16">
           <div className="flex items-center justify-center mb-4">
             <img
               src="https://minilessonsacademy.com/wp-content/uploads/2024/10/14-WInner.png"
               alt="Winner Badge"
               className="w-16 h-16 mr-4"
             />
-            <p className="text-xl text-purple-200 font-medium">
+            <p className="text-xl text-gray-700 font-medium">
               🏆 Join us in celebrating these creators!
             </p>
           </div>
         </div>
       </div>
+
+      {/* Add required CSS for animations */}
+      <style >{`
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        
+        .backface-hidden {
+          backface-visibility: hidden;
+        }
+        
+        .animate-flip-next {
+          animation: flipNext 800ms ease-in-out forwards;
+        }
+        
+        .animate-flip-prev {
+          animation: flipPrev 800ms ease-in-out forwards;
+        }
+        
+        .animate-fade-out {
+          animation: fadeOut 400ms ease-in-out forwards;
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 400ms ease-in-out 400ms forwards;
+          opacity: 0;
+        }
+        
+        @keyframes flipNext {
+          0% {
+            transform: rotateY(0deg);
+          }
+          100% {
+            transform: rotateY(180deg);
+          }
+        }
+        
+        @keyframes flipPrev {
+          0% {
+            transform: rotateY(0deg);
+          }
+          100% {
+            transform: rotateY(-180deg);
+          }
+        }
+        
+        @keyframes fadeOut {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        
+        @keyframes fadeIn {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default CourseSpotlight; 
+export default CourseSpotlight;

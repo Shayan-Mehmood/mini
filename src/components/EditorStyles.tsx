@@ -42,20 +42,20 @@ const EditorStyles: React.FC = () => {
       }
       
       /* Critical fix for smooth resizing */
-      .ql-editor {
-        min-height: 200px;
-        padding: 24px;
-        font-size: 16px;
-        line-height: 1.75;
-        color: #374151;
-        max-height: auto;
-        overflow-y: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        position: relative;
-        /* Ensure proper stacking context for resize handles */
-        z-index: 1;
-      }
+      // .ql-editor {
+      //   min-height: 200px;
+      //   padding: 24px;
+      //   font-size: 16px;
+      //   line-height: 1.75;
+      //   color: #374151;
+      //   max-height: auto;
+      //   overflow-y: auto;
+      //   scrollbar-width: none;
+      //   -ms-overflow-style: none;
+      //   position: relative;
+      //   /* Ensure proper stacking context for resize handles */
+      //   z-index: 1;
+      // }
 
       .ql-editor::-webkit-scrollbar {
         display: none;

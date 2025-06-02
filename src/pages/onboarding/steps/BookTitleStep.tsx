@@ -46,6 +46,20 @@ const ContentTitleStep: React.FC<ContentTitleStepProps> = ({ bookData, selectedT
 
   },[isSubmitting])
 
+  useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      if (titlePrompt.trim()) {
+        handlePromptSubmit();
+      }
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [titlePrompt]);
+
   const fetchTitlesFromAPI = async (isInitialFetch = false) => {
     setIsLoading(true)
     setError(null)

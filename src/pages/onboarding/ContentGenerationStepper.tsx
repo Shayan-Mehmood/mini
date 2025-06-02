@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import {
   Check,
@@ -11,6 +9,10 @@ import {
   FileText,
   Loader2,
   X,
+  Upload,
+  Zap,
+  BookType,
+  ArrowRight,
 } from "lucide-react";
 import BookPurposeStep from "./steps/BookPurposeStep";
 import BookDetailsStep from "./steps/BookDetailsStep";
@@ -22,6 +24,10 @@ import { useNavigate, useParams } from "react-router";
 
 import ContentGenerationViewer from "../../components/ContentGeneration/ContentGenerationViewer";
 import '../../index.css';
+import DocumentUploadCreator from "../../components/ContentGeneration/DocumentUploadCreator";
+import QuickCourseCreator from "../../components/ContentGeneration/QuickCourseCreator";
+import { renderTopStepsTimeline } from "../../components/ContentGeneration/ContentTimelineStepper";
+
 // Update ContentData type to include summary
 export type ContentData = {
   purpose: string;
@@ -33,11 +39,21 @@ export type ContentData = {
   numOfChapters: number;
 };
 
+// Creation methods enum
+enum CreationMethod {
+  NONE = "none",
+  WIZARD = "wizard",
+  UPLOAD = "upload",
+  QUICK = "quick"
+}
+
 // Rename the component to be more generic
 const ContentGenerationStepper = () => {
   const navigate = useNavigate();
   const { contentType } = useParams<{ contentType?: string }>();
 
+  // Track which creation method is selected
+  const [creationMethod, setCreationMethod] = useState<CreationMethod>(CreationMethod.NONE);
   const [currentStep, setCurrentStep] = useState(() => {
     return contentType ? 1 : 0;
   });
@@ -78,6 +94,14 @@ const ContentGenerationStepper = () => {
   const [isSummaryGenerated, setIsSummaryGenerated] = useState(false);
   const [chaptersData, setChaptersData] = useState<any[]>([]);
   const [chapterFetchCount, setChapterFetchCount] = useState(0);
+  
+  // For document upload
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // For quick creation
+  const [quickPrompt, setQuickPrompt] = useState("");
 
   const isBookContent = contentData?.category === "book";
 
@@ -290,6 +314,148 @@ const ContentGenerationStepper = () => {
     return false;
   };
 
+  // Handle file upload via dropzone
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+  
+  const validateAndSetFile = (file: File) => {
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (validTypes.includes(file.type) || ['pdf', 'docx'].includes(fileExtension || '')) {
+      setUploadedFile(file);
+      setSubmitError(null);
+    } else {
+      setSubmitError("Please upload a PDF or Word document");
+    }
+  };
+
+  // Process document upload
+  const handleDocumentUpload = async () => {
+    if (!uploadedFile) {
+      setSubmitError("Please select a file to upload");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(progressInterval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 300);
+      
+      // Upload document
+      const response = await apiService.post("/content/upload-document", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      if (response.success) {
+        // Handle successful upload
+        setContentId(response.data.id);
+        setTimeout(() => {
+          setIsCompleted(true);
+        }, 1000);
+      } else {
+        throw new Error(response.message || "Failed to process document");
+      }
+    } catch (err) {
+      console.error("Error uploading document:", err);
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Failed to upload document. Please try again."
+      );
+      setUploadProgress(0);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Quick creation process - simplified to just take a prompt
+  const handleQuickCreate = async () => {
+    if (!quickPrompt) {
+      setSubmitError("Please enter a title or topic for your course");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      const response = await apiService.post("/onboard/quick-create", {
+        prompt: quickPrompt,
+        contentType: "educational_course",
+        contentCategory: "course"
+      });
+      
+      if (response.success) {
+        setContentId(response.data.id);
+        setTimeout(() => {
+          setIsCompleted(true);
+        }, 1000);
+      } else {
+        throw new Error(response.message || "Failed to create course");
+      }
+    } catch (err) {
+      console.error("Error creating course:", err);
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create course. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -360,6 +526,151 @@ const ContentGenerationStepper = () => {
     }
   };
 
+ 
+  
+  // Render method selection cards
+  const renderCreationOptions = () => {
+  return (
+    <div className="px-4  min-h-screen py-8 sm:px-6 md:px-10 lg:px-12 max-w-6xl mx-auto">
+      <div className="mb-10 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+          Create New Content
+        </h2>
+        <p className="text-base text-gray-600">
+          Choose how you'd like to begin creating your content
+        </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Card Template */}
+        {[
+          {
+            title: "Guided Creation",
+            subtitle: "Step-by-Step Wizard",
+            description:
+              "Create detailed, customized content with our guided assistant. Ideal for in-depth courses and books.",
+            colorFrom: "from-purple-500",
+            colorTo: "to-purple-700",
+            icon: <BookType className="h-5 w-5" />,
+            buttonText: "Start Guided Creation",
+            buttonColor: "bg-purple-500 hover:bg-purple-600",
+            features: [
+              "Multiple customization options",
+              "Fine-tune each chapter",
+              "Best for detailed content",
+            ],
+            onClick: () => {
+              setCreationMethod(CreationMethod.WIZARD);
+              setCurrentStep(0);
+            },
+            buttonIcon: <ChevronRight className="w-4 h-4" />,
+            // hoverBorder: "hover:border-purple-300",
+          },
+          {
+            title: "Document Upload",
+            subtitle: "Use Existing Document",
+            description:
+              "Convert your existing document into an interactive course. Upload PDF or DOCX files.",
+           colorFrom: "from-purple-500",
+            colorTo: "to-purple-700",
+            icon: <Upload className="h-5 w-5" />,
+            buttonText: "Upload Document",
+            buttonColor: "bg-purple-500 hover:bg-purple-600",
+            features: [
+              "Turn existing materials into courses",
+              "Automatic content extraction",
+              "Keep your original formatting",
+            ],
+            onClick: () => setCreationMethod(CreationMethod.UPLOAD),
+            buttonIcon: <Upload className="w-4 h-4" />,
+            // hoverBorder: "hover:border-blue-300",
+          },
+          {
+            title: "Quick Creator",
+            subtitle: "One-Click Course",
+            description:
+              "Generate a complete course instantly with just a prompt. Perfect when you need content quickly.",
+            colorFrom: "from-purple-500",
+            colorTo: "to-purple-700",
+            icon: <Zap className="h-5 w-5" />,
+            buttonText: "Create Instantly",
+            buttonColor: "bg-purple-500 hover:bg-purple-600",
+            features: [
+              "Fastest content creation option",
+              "AI-generated structure and content",
+              "Just provide a topic or title",
+            ],
+            onClick: () => setCreationMethod(CreationMethod.QUICK),
+            buttonIcon: <Zap className="w-4 h-4" />,
+            // hoverBorder: "hover:border-amber-300",
+          },
+        ].map(
+          (
+            {
+              title,
+              subtitle,
+              description,
+              icon,
+              colorFrom,
+              colorTo,
+              buttonText,
+              buttonColor,
+              features,
+              onClick,
+              buttonIcon,
+              // hoverBorder,
+            },
+            index
+          ) => (
+            <div
+              key={index}
+              className={`bg-white shadow-md border border-gray-200 transition-all duration-300  hover:shadow-xl flex flex-col`}
+            >
+              <div
+                className={`bg-gradient-to-r ${colorFrom} ${colorTo} p-4 text-white flex justify-between items-center`}
+              >
+                <h3 className="font-semibold text-white text-base">{title}</h3>
+                {icon}
+              </div>
+
+              <div className="p-6 flex flex-col justify-between flex-grow">
+                <div className="mb-6 space-y-2">
+                  <h4 className="text-lg font-medium text-gray-800">
+                    {subtitle}
+                  </h4>
+                  <p className="text-sm text-gray-600">{description}</p>
+                </div>
+
+                <ul className="space-y-2 mb-6">
+                  {features.map((feature, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center text-sm text-gray-600"
+                    >
+                      <Check className="h-4 w-4 text-green-500 mr-2" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={onClick}
+                  className={`w-full ${buttonColor} text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors`}
+                >
+                  {buttonText}
+                  {buttonIcon}
+                </button>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+  // Success state for completed content creation
   if (isCompleted) {
     return (
       <div className="max-w-3xl mx-auto rounded-2xl shadow-[0_20px_60px_-15px_rgba(124,58,237,0.3)] overflow-hidden">
@@ -382,34 +693,19 @@ const ContentGenerationStepper = () => {
 
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              "{contentData.title}"
+              {creationMethod === CreationMethod.UPLOAD 
+                ? uploadedFile?.name.split('.')[0]
+                : creationMethod === CreationMethod.QUICK 
+                  ? quickPrompt.split('.')[0].substring(0, 40) + (quickPrompt.length > 40 ? '...' : '')
+                  : contentData.title}
             </h3>
             <p className="text-gray-600">
-              Your {contentData.details.audience} {contentData.purpose} content
-              is being crafted with care.
+              {creationMethod === CreationMethod.UPLOAD 
+                ? "Your document has been processed and converted to a course."
+                : creationMethod === CreationMethod.QUICK
+                  ? "Your course has been quickly generated based on your prompt."
+                  : `Your ${contentData.details.audience} ${contentData.purpose} content is being crafted with care.`}
             </p>
-          </div>
-
-          <div className="bg-purple-50 border border-purple-100 rounded-xl p-6 mb-8">
-            <h4 className="font-medium text-purple-800 mb-3">
-              Content Details
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-sm">
-                <span className="text-gray-500">Type:</span>
-                <span className="ml-2 text-gray-800 font-medium capitalize">
-                  {contentData.purpose}
-                </span>
-              </div>
-              {Object.entries(contentData.details).map(([key, value]) => (
-                <div key={key} className="text-sm">
-                  <span className="text-gray-500 capitalize">{key}:</span>
-                  <span className="ml-2 text-gray-800 font-medium">
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="flex justify-center">
@@ -430,79 +726,23 @@ const ContentGenerationStepper = () => {
     );
   }
 
+  // Determine which UI to render based on creationMethod
+  if (creationMethod === CreationMethod.UPLOAD) {
+    return navigate('by-document');
+  } else if (creationMethod === CreationMethod.QUICK) {
+    return navigate('one-click-creator');
+  } else if (creationMethod === CreationMethod.NONE) {
+    return renderCreationOptions();
+  }
+
+
+
+
+  // Original step-by-step wizard UI
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6 mt-6 px-2">
-        {/* Desktop/Tablet: Show all steps */}
-        <div className="scrollbar-hide hidden sm:flex flex-nowrap items-start justify-start overflow-x-auto gap-4">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              className="flex items-center flex-shrink-0 group"
-            >
-              <div className="flex-shrink-0">
-                <div
-                  className={`flex items-center justify-center w-8 h-8 text-xs rounded-full transition-all duration-300 ${
-                    index < currentStep
-                      ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md"
-                      : index === currentStep
-                      ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg ring-2 ring-purple-100"
-                      : "bg-gray-100 text-gray-400"
-                  }`}
-                >
-                  {index < currentStep ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span className="text-sm font-semibold">{index + 1}</span>
-                  )}
-                </div>
-              </div>
-              <div className="ml-2">
-                <p
-                  className={`text-xs font-medium transition-colors ${
-                    index <= currentStep ? "text-gray-900" : "text-gray-400"
-                  }`}
-                >
-                  {step.name}
-                </p>
-                <p className="text-[10px] text-gray-500 max-w-[100px] truncate">
-                  {step.description}
-                </p>
-              </div>
-              {index < steps.length - 1 && (
-                <div className="w-12 mx-2 hidden sm:block">
-                  <div className="h-[2px] bg-gray-100 rounded-full">
-                    <div
-                      className={`h-[2px] rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all duration-500 ease-in-out ${
-                        index < currentStep ? "w-full" : "w-0"
-                      }`}
-                    ></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        {/* Mobile: Only show the active step, centered */}
-        <div className="flex sm:hidden justify-center items-center">
-          <div className="flex items-center flex-shrink-0 group">
-            <div className="flex-shrink-0">
-              <div
-                className={`flex items-center justify-center w-8 h-8 text-xs rounded-full transition-all duration-300 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg ring-2 ring-purple-100`}
-              >
-                <span className="text-sm font-semibold">{currentStep + 1}</span>
-              </div>
-            </div>
-            <div className="ml-2">
-              <p className="text-xs font-medium text-gray-900">
-                {steps[currentStep].name}
-              </p>
-              <p className="text-[10px] text-gray-500 max-w-[100px] truncate">
-                {steps[currentStep].description}
-              </p>
-            </div>
-          </div>
-        </div>
+       {renderTopStepsTimeline(steps,currentStep)}
       </div>
 
       {submitError && (
@@ -618,12 +858,15 @@ const ContentGenerationStepper = () => {
         
       </div>
 
-      
       <div className="absolute md:right-10 md:top-10 right-2 top-2 p-1 rounded-full bg-red-600 text-white cursor-pointer" onClick={()=>navigate('/dashboard')}>
           <X  />
       </div>
     </div>
   );
 };
+
+
+
+
 
 export default ContentGenerationStepper;

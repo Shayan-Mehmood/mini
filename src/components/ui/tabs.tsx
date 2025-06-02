@@ -294,6 +294,7 @@ const Tabs = () => {
         )}
 
       <Modal
+        maxWidth="max-w-xl"
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         title="Delete Course"
@@ -305,6 +306,7 @@ const Tabs = () => {
         </div>}
       />  
       <Modal
+        maxWidth="max-w-xl"
         isOpen={isOpenDownloadAs}
         onClose={() => setIsOpenDownloadAs(false)}
         title="Download as"

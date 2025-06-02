@@ -80,7 +80,7 @@ const EditCoursePage = () => {
   const [currentEditingImage, setCurrentEditingImage] = useState<string | null>(
     null
   );
-  const [isGalleryVisible, setIsGalleryVisible] = useState(true);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
 
   const quillRef = useRef<ReactQuill>(null);
   const [showEditConfirmation, setShowEditConfirmation] =
@@ -1617,7 +1617,7 @@ const handleDeleteQuiz = async () => {
   onClick={handleOpenCoverGenerator} // Use the specific cover handler
 >
   <Book className="w-4 h-4" />
-  <span className="text-xs whitespace-nowrap">Course Cover</span>
+  <span className="text-xs whitespace-nowrap">Create Cover</span>
 </Button>
 
               {selectedChapterIndex !== -1 &&
@@ -1643,7 +1643,7 @@ isCoverChapter(
       </span>
     </Button>
   )}
-            {/* <Button
+            <Button
               variant="soft"
               size="sm"
               className="bg-gray-100 hover:bg-gray-200 transition flex items-center gap-1"
@@ -1652,7 +1652,7 @@ isCoverChapter(
             >
               <ExternalLink className="w-4 h-4 text-primary" />
               <span className="text-xs whitespace-nowrap">share preview</span>
-            </Button> */}
+            </Button>
           </div>
           <Button
             variant="outline"
@@ -1883,7 +1883,7 @@ isCoverChapter(
      <Modal
   isOpen={openEditor}
   onClose={() => setOpenEditor(false)}
-  title={ "Edit Cover Image"}
+  title={ "Edit Image"}
   maxWidth="max-w-6xl"
 >
   <ImageEditor

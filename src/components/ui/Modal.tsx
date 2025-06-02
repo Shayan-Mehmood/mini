@@ -15,7 +15,7 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  maxWidth = 'max-w-4xl' // Increased from max-w-3xl
+  maxWidth = 'max-w-3xl' // Increased from max-w-3xl
 }) => {
   // Add keyboard support to close with ESC key
   useEffect(() => {

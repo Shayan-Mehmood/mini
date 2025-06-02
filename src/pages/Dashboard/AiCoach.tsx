@@ -390,7 +390,7 @@ const AICoach: React.FC = () => {
           </div>
 
           {/* Header Section */}
-          <div className="relative mb-8 sm:mb-16 text-center">
+          <div className="relative mb-8 sm:mb-16 text-center hidden">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">Your A.I. Assistant, Andy</h1>
             <div className="flex items-center justify-center gap-2 mb-4">
               <span className="text-2xl">👋</span>
@@ -404,35 +404,6 @@ const AICoach: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Links Section */}
-          <div className="mb-12">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">🚀 Super-Fast Help From Andy</h2>
-              <p className="text-gray-600 text-center mb-8">
-                Click on any topic below to jump straight to that assistant. Andy's ready to help with whatever you need!
-              </p>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                {quickLinks.map((link, index) => (
-                  <button
-                    key={index}
-                    onClick={() => scrollToAssistant(index + 1)}
-                    className="group p-3 bg-gradient-to-br from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg border border-gray-200 hover:border-blue-300 transition-all duration-200 text-left"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-700 transition-colors">
-                        {link.name}
-                      </h3>
-                      <ArrowRight className="w-3 h-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    </div>
-                    <p className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors">
-                      {link.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
 
           {/* Top Content Section */}
           <div className="mb-12">
@@ -450,7 +421,7 @@ const AICoach: React.FC = () => {
                         <span className="text-blue-600 text-sm font-bold">1</span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800 text-2xl">Pick Your Tool</h3>
+                        <h3 className=" text-gray-800 text-2xl">Pick Your Tool</h3>
                         <p className="text-sm text-gray-600">Choose from Andy's specialized assistants below</p>
                       </div>
                     </div>
@@ -459,7 +430,7 @@ const AICoach: React.FC = () => {
                         <span className="text-blue-600 text-sm font-bold">2</span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800 text-2xl">Tell Andy What You Need</h3>
+                        <h3 className=" text-gray-800 text-2xl">Tell Andy What You Need</h3>
                         <p className="text-sm text-gray-600">Type in your request - be as specific as you want</p>
                       </div>
                     </div>
@@ -468,7 +439,7 @@ const AICoach: React.FC = () => {
                         <span className="text-blue-600 text-sm font-bold">3</span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800 text-2xl">Get Amazing Results</h3>
+                        <h3 className=" text-gray-800 text-2xl">Get Amazing Results</h3>
                         <p className="text-sm text-gray-600">Andy will create exactly what you need in seconds</p>
                       </div>
                     </div>
@@ -476,7 +447,7 @@ const AICoach: React.FC = () => {
                 </div>
                 <div className="text-center">
                   <div className="inline-block p-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl">
-                    <div className="text-6xl mb-4">🤖</div>
+                    <div className="text-6xl mb-4">👨‍💼</div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Meet Andy</h3>
                     <p className="text-gray-600">Your AI marketing assistant ready to help with any challenge</p>
                   </div>
@@ -521,6 +492,37 @@ const AICoach: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Quick Links Section */}
+          <div className="mb-12">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">🚀 Super-Fast Help From Andy</h2>
+              <p className="text-gray-600 text-center mb-8">
+                Click on any topic below to jump straight to that assistant. Andy's ready to help with whatever you need!
+              </p>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                {quickLinks.map((link, index) => (
+                  <button
+                    key={index}
+                    onClick={() => scrollToAssistant(index + 1)}
+                    className="group p-3 bg-gradient-to-br from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg border border-gray-200 hover:border-blue-300 transition-all duration-200 text-left"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-gray-800 text-sm group-hover:text-blue-700 transition-colors">
+                        {link.name}
+                      </h3>
+                      <ArrowRight className="w-3 h-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                    </div>
+                    <p className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors">
+                      {link.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
 
           {/* AI Assistants Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-12">
@@ -642,10 +644,16 @@ const AICoach: React.FC = () => {
 
       {/* Response Modal */}
       {activeModal && aiResponses[activeModal.assistantId] && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full md:max-h-[90vh] overflow-hidden animate-enter">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full md:max-h-[90vh] overflow-hidden animate-enter"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary to-secondary">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-tl">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-secondary font-semibold text-white">

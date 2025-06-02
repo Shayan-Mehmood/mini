@@ -96,7 +96,7 @@ const TopToolbar: React.FC<TopToolbarProps> = ({
       <>
         <Check size={16} className="mr-2" />
         <span className="font-medium">
-          {isCoverEdit ? "Update Cover" : "Apply Changes"}
+          {isCoverEdit ? "Update Image" : "Apply Changes"}
         </span>
       </>
     )}
