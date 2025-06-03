@@ -87,22 +87,22 @@ const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({ selectedDetails
       value: selectedDetails.tone || "",
       description: "The emotional quality of the writing"
     },
-    {
-      id: "media",
-      name: "Media Type",
-      icon: <Settings size={18} className="text-purple-500" />,
-      options: [
-        "Text-only",
-        "Text with Graphics",
-        "Illustrated",
-        "Interactive Elements",
-        "Video Support",
-        "Audio Companion",
-        "Multi-format"
-      ],
-      value: selectedDetails.media || "",
-      description: "What formats and media elements to include"
-    },
+    // {
+    //   id: "media",
+    //   name: "Media Type",
+    //   icon: <Settings size={18} className="text-purple-500" />,
+    //   options: [
+    //     "Text-only",
+    //     "Text with Graphics",
+    //     "Illustrated",
+    //     "Interactive Elements",
+    //     "Video Support",
+    //     "Audio Companion",
+    //     "Multi-format"
+    //   ],
+    //   value: selectedDetails.media || "",
+    //   description: "What formats and media elements to include"
+    // },
   ]
 
   const renderDetailCard = (detail: any) => {

@@ -1,7 +1,8 @@
 // ChapterGallery.tsx
 import React, { useState, useEffect } from "react";
-import { Book, ChevronDown, ChevronUp, FileText, BookOpen, Trash2, ChevronRight, ChevronLeft,  PencilIcon } from 'lucide-react';
+import { Book, ChevronDown, ChevronUp, FileText, BookOpen, Trash2, ChevronRight, ChevronLeft,  PencilIcon, PlusIcon } from 'lucide-react';
 import Tooltip from "../../../components/ui/tooltip";
+import Modal from "../../../components/ui/Modal";
 
 interface ChapterGalleryProps {
   chapters: any[];
@@ -11,6 +12,7 @@ interface ChapterGalleryProps {
   onToggleVisibility: () => void; // Function to toggle visibility
   onEditHeading: (chapter:string, newTitle:string, index:number) => void;
   isSelectionDisabled?: boolean;
+  onAddChapter?: (chapter:string) => void;
 
 }
 
@@ -22,6 +24,7 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
   onToggleVisibility,
   onEditHeading,
   isSelectionDisabled = false,
+  onAddChapter
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null);
@@ -29,8 +32,15 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [newTitle, setNewTitle] = useState<string>('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [newChapterTitle, setNewChapterTitle] = useState<string>('');
 
 
+  const handleAddChapter = () => {
+    onAddChapter?.(newChapterTitle);
+    setIsModalOpen(false);
+    setNewChapterTitle('');
+  }
 
   const handleEditSave = () => {
     if (editingIndex !== null && onEditHeading) {
@@ -202,7 +212,6 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
     setNewTitle(title);
   };
 
-
   const handleEditCancel = () => {
     setEditingIndex(null);
     setNewTitle('');
@@ -276,17 +285,25 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
               <Book className="w-5 h-5 mr-2 text-primary" />
                Chapters
             </h3>
-            <button 
-              onClick={onToggleVisibility}
+            <div className="flex items-center gap-2">
+              <button
+              onClick={() => setIsModalOpen(true)}
               className="p-1.5 rounded-full bg-purple-100 hover:bg-purple-200 transition-colors shadow-sm"
-              aria-label={isMobile ? "Close chapters panel" : "Collapse chapters panel"}
             >
-              {isMobile ? (
-                <ChevronUp className="w-4 h-4 text-purple-700" />
-              ) : (
-                <ChevronLeft className="w-4 h-4 text-purple-700" />
-              )}
+              <PlusIcon className="w-4 h-4 text-purple-700" />
             </button>
+              <button 
+                onClick={onToggleVisibility}
+                className="p-1.5 rounded-full bg-purple-100 hover:bg-purple-200 transition-colors shadow-sm"
+                aria-label={isMobile ? "Close chapters panel" : "Collapse chapters panel"}
+              >
+                {isMobile ? (
+                  <ChevronUp className="w-4 h-4 text-purple-700" />
+                ) : (
+                  <ChevronLeft className="w-4 h-4 text-purple-700" />
+                )}
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 md:z-0 z-50 sm:space-y-3 scrollbar-thin scrollbar-thumb-purple-200 scrollbar-track-transparent">
@@ -416,6 +433,24 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
         </div>
       </div>
     )}
+
+    {/* Modal comes here */}
+    <Modal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      title="Add Chapter"
+    >
+      <p>Kindly enter the chapter title you want to add</p>
+      <input
+        type="text"
+        value={newChapterTitle}
+        onChange={(e) => setNewChapterTitle(e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded mb-4"
+        placeholder="Enter chapter title"
+      />
+      <button onClick={handleAddChapter} className="px-4 py-2 bg-purple-600 text-white rounded">Add Chapter</button>
+      
+    </Modal>
     </>
   );
 };

@@ -36,6 +36,7 @@ import AICoach from "./pages/Dashboard/AiCoach";
 import Profile from "./pages/Dashboard/Profile";
 import DocumentUploadCreator from "./components/ContentGeneration/DocumentUploadCreator";
 import QuickCourseCreator from "./components/ContentGeneration/QuickCourseCreator";
+import { useChargebee } from './hooks/useChargebee';
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -46,6 +47,9 @@ function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+    useChargebee();
+
 
   // Check for token in URL on component mount or URL change
   useEffect(() => {
@@ -243,8 +247,8 @@ function App() {
                 <Route path="/create/by-document" element={<DocumentUploadCreator />} />
                                 <Route path="/create/one-click-creator" element={<QuickCourseCreator />} />
               </Route>
-              <Route path="/shared/:type/:id" element={<SharedContent />} />
             </Route>
+            <Route path="/shared/:type/:id" element={<SharedContent />} />
            
             {/* Other routes */}
           </Routes>

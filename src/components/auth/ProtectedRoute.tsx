@@ -30,6 +30,10 @@ const ProtectedRoute = () => {
       const token:string = localStorage.getItem('authToken')||'';
 
       console.log('Token:', token);
+      if(token === 'undefined' || token === null || token === undefined || token === ''){
+        handleAuthFailure();
+        return;
+      }
       const myDecodedToken:any = jwtDecode<JwtPayload>(token);
       console.log('Decoded Token:', myDecodedToken);
       // Checking if the token is expired

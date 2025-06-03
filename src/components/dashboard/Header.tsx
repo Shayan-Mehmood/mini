@@ -55,14 +55,23 @@ const Header: React.FC = () => {
 
         {/* Profile Button */}
         <div className="hidden md:block">
-          <Link
+          {/* <Link
             to="https://minilessonsacademy.com/my-account/"
             className="flex items-center justify-center text-white bg-gradient-to-tl font-medium rounded-full px-6 py-2.5 transition-all duration-200 shadow-md hover:shadow-lg"
           >
             <User className="h-4 w-4 mr-2" />
             Profile
             <ChevronRight className="w-4 h-4 ml-1" />
-          </Link>
+          </Link> */}
+          <a
+  href="javascript:void(0)" 
+  data-cb-type="portal"
+  className="flex items-center justify-center text-white bg-gradient-to-tl font-medium rounded-full px-6 py-2.5 transition-all duration-200 shadow-md hover:shadow-lg"
+>
+  <User className="h-4 w-4 mr-2" />
+  Profile
+  <ChevronRight className="w-4 h-4 ml-1" />
+</a>
         </div>
 
         {/* Mobile Menu Button */}

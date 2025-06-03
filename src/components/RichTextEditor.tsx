@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import EditorStyles from './EditorStyles';
 import EditorToolbar from './EditorToolbar';
 import BlotFormatter2 from '@enzedonline/quill-blot-formatter2';
-import { Save, Edit, Image, ChevronRight, FileText, PanelLeftOpen } from 'lucide-react';
+import { Save, Edit, Image, ChevronRight, FileText, PanelLeftOpen, Lightbulb, Loader2 } from 'lucide-react';
 import '../index.css';
 
 // Register the BlotFormatter2 module with Quill
@@ -25,10 +25,12 @@ interface RichTextEditorProps {
   onContentChange: (content: string) => void;
   onSave: () => void;
   onImageClick?: (imageUrl: string) => void;
+  onEnhanceText?: (selectedText: string, fullContent: string) => Promise<string>;
 }
 
 // Improved cleanHtmlContent function that preserves image attributes during resize
 const cleanHtmlContent = (htmlContent: string): string => {
+  // Existing code...
   if (!htmlContent) return htmlContent;
   
   if(typeof(htmlContent) === 'string'){
@@ -58,7 +60,7 @@ const cleanHtmlContent = (htmlContent: string): string => {
 };
 
 const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
-  ({ initialContent, imageUrl, id, onContentChange, onSave, onImageClick }, ref) => {
+  ({ initialContent, imageUrl, id, onContentChange, onSave, onImageClick, onEnhanceText }, ref) => {
     const [content, setContent] = useState(() => cleanHtmlContent(initialContent));
     const isResizingRef = useRef(false);
     const editorRef = useRef<HTMLDivElement | null>(null);
@@ -67,6 +69,10 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
     const skipContentUpdateRef = useRef(false);
     const contentBeforeResizeRef = useRef<string>('');
     const pendingContentRef = useRef<string | null>(null);
+    
+    // New state for text enhancement feature
+    const [selectedText, setSelectedText] = useState<string>('');
+    const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
 
     useEffect(() => {
       if (initialContent) {
@@ -79,6 +85,7 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
 
     useEffect(() => {
       if (imageUrl && ref && 'current' in ref && ref.current) {
+        // Existing code...
         const editor = ref.current.getEditor();
         const range = editor.getSelection();
         const index = range ? range.index : editor.getLength();
@@ -87,7 +94,35 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       }
     }, [imageUrl, ref]);
 
-    // Enhanced resize tracking
+    // Track text selection in the editor
+    useEffect(() => {
+      const checkSelection = () => {
+        if (!ref || !('current' in ref) || !ref.current) return;
+        
+        const editor = ref.current.getEditor();
+        const selection = editor.getSelection();
+        
+        if (selection && selection.length > 0) {
+          const text = editor.getText(selection.index, selection.length);
+          if (text.trim().length > 0) {
+            setSelectedText(text);
+            return;
+          }
+        }
+        
+        setSelectedText('');
+      };
+      
+      document.addEventListener('selectionchange', checkSelection);
+      document.addEventListener('mouseup', checkSelection);
+      
+      return () => {
+        document.removeEventListener('selectionchange', checkSelection);
+        document.removeEventListener('mouseup', checkSelection);
+      };
+    }, [ref]);
+
+    // Enhanced resize tracking - existing code...
     useEffect(() => {
       const handleMouseDown = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
@@ -186,55 +221,91 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       onContentChange(cleanedContent);
     };
 
-    // Enhanced modules configuration
-    const modules = {
-  toolbar: {
-    container: [
-      [{ header: [1, 2, 3, false] }],
-      [{ font: [] }],
-      [{ size: ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
-      [{ color: [] }, { background: [] }],
-      [{ align: ['', 'center', 'right', 'justify'] }],
-      ['link'],
-      ['clean'],
-    ],
-  },
-  blotFormatter2: {
-    align: {
-      allowAligning: false,
-    },
-    image: {
-      allowAltTitleEdit: false
-    },
-    resize: {
-      allowResize: true,
-      handleStyle: {
-        backgroundColor: 'transparent',  // Changed from purple to transparent
-        border: '1px solid #ccc',        // More subtle border
-        borderRadius: '50%',
-        width: '10px',                  // Smaller handles
-        height: '10px'
-      },
-      throttle: 0,
-    },
-    overlay: {
-      className: 'blot-formatter__overlay',
-      style: {
-        position: 'absolute',
-        boxSizing: 'border-box',
-        border: 'none',                // Removed purple border
-        backgroundColor: 'transparent'  // Removed light purple background
+    // Function to handle text enhancement with AI
+    const handleEnhanceText = async () => {
+      if (!onEnhanceText || !selectedText || isEnhancing) return;
+      
+      try {
+        setIsEnhancing(true);
+        
+        // Get the current editor and selection
+        if (!ref || !('current' in ref) || !ref.current) return;
+        const editor = ref.current.getEditor();
+        const selection = editor.getSelection();
+        
+        if (!selection) return;
+        
+        // Call the enhance text function passed from parent
+        const enhancedText = await onEnhanceText(selectedText, content);
+        
+        // Replace the selected text with the enhanced text
+        editor.deleteText(selection.index, selection.length);
+        editor.insertText(selection.index, enhancedText);
+        
+        // Update the content state
+        const updatedContent = editor.root.innerHTML;
+        setContent(updatedContent);
+        onContentChange(updatedContent);
+        
+        // Clear selection
+        setSelectedText('');
+        
+      } catch (error) {
+        console.error('Error enhancing text:', error);
+      } finally {
+        setIsEnhancing(false);
       }
-    }
-  }, 
-  clipboard: {
-    matchVisual: false
-  }
-};
+    };
+
+    // Enhanced modules configuration - existing code...
+    const modules = {
+      toolbar: {
+        container: [
+          [{ header: [1, 2, 3, false] }],
+          [{ font: [] }],
+          [{ size: ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+          [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+          [{ color: [] }, { background: [] }],
+          [{ align: ['', 'center', 'right', 'justify'] }],
+          ['link'],
+          ['clean'],
+        ],
+      },
+      blotFormatter2: {
+        align: {
+          allowAligning: false,
+        },
+        image: {
+          allowAltTitleEdit: false
+        },
+        resize: {
+          allowResize: true,
+          handleStyle: {
+            backgroundColor: 'transparent',
+            border: '1px solid #ccc',
+            borderRadius: '50%',
+            width: '10px',
+            height: '10px'
+          },
+          throttle: 0,
+        },
+        overlay: {
+          className: 'blot-formatter__overlay',
+          style: {
+            position: 'absolute',
+            boxSizing: 'border-box',
+            border: 'none',
+            backgroundColor: 'transparent'
+          }
+        }
+      }, 
+      clipboard: {
+        matchVisual: false
+      }
+    };
     
-    // Add this CSS to your styles
+    // Add CSS for editor styling - existing code...
     useEffect(() => {
       const style = document.createElement('style');
       style.innerHTML = `
@@ -252,7 +323,7 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       };
     }, []);
 
-    // Render placeholder
+    // Render placeholder - existing code...
     if (showPlaceholder) {
       return (
         <div className="flex flex-col mx-auto w-full h-full">
@@ -271,7 +342,7 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       );
     }
 
-    // Simplified image CORS fix - only run once after content stabilizes
+    // Simplified image CORS fix - existing code...
     useEffect(() => {
       if (isResizingRef.current) {
         return; // Skip during resize
@@ -335,6 +406,27 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
             theme="snow"
             preserveWhitespace
           />
+          
+          {/* AI Text Enhancement Button */}
+          {selectedText && onEnhanceText && (
+            <div className=" fixed bottom-4 right-4 z-10">
+              <Button
+                onClick={handleEnhanceText}
+                disabled={isEnhancing}
+                className="bg-yellow-500 hover:bg-yellow-600  text-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center"
+                title="Enhance selected text with AI"
+              >
+                {isEnhancing ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Lightbulb className="h-5 w-5" />
+                    <span className='text-[12px]'>Enhance Text</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
