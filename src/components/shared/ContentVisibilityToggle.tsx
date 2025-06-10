@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Globe, Lock, Copy, Loader2, Check } from 'lucide-react';
 import apiService from '../../utilities/service/api';
 import toast from 'react-hot-toast';
+import { getUserId } from '../../utilities/shared/userUtils';
 
 interface ContentVisibilityToggleProps {
   contentId: string;
@@ -50,11 +51,11 @@ const ContentVisibilityToggle: React.FC<ContentVisibilityToggleProps> = ({
     try {
       const newStatus = !isPublic;
 // Line 52
-const userIdString = localStorage.getItem('userId');
-const userId = userIdString ? JSON.parse(userIdString) : null;
+// const userIdString = localStorage.getItem('userId');
+// const userId = userIdString ? JSON.parse(userIdString) : null;
       const response = await apiService.put(`/shared/toggle-visibility/${contentId}/${contentType}`, {
         isPublic: newStatus,
-        userId: userId 
+        userId: getUserId() 
       });
       
       if (response.success) {
