@@ -21,6 +21,7 @@ interface ContentGenerationViewerProps {
   contentType: string;
   contentCategory: string;
   contentDetails: Record<string, string>;
+  includeCitations?: boolean; // Add this as a direct prop
   onBack: () => void;
 }
 
@@ -50,6 +51,7 @@ const ContentGenerationViewer: React.FC<ContentGenerationViewerProps> = ({
   contentType,
   contentCategory,
   contentDetails,
+  includeCitations = false, // Default to false
   onBack,
 }) => {
   // Extract chapter titles from the input data structure
@@ -359,6 +361,7 @@ const ContentGenerationViewer: React.FC<ContentGenerationViewerProps> = ({
       // Update progress indicator
       setGenerationProgress(Math.round(((index) / chapterTitlesArray.length) * 100));
       
+      
       while (attempts < MAX_RETRIES && !success) {
         try {
           const chapterPayload = {
@@ -370,7 +373,8 @@ const ContentGenerationViewer: React.FC<ContentGenerationViewerProps> = ({
             contentType: contentType,
             contentCategory: contentCategory,
             contentDetails: contentDetails,
-            totalChapters : chapterTitlesArray.length
+            totalChapters: chapterTitlesArray.length,
+            includeCitations: includeCitations // Use the direct prop
           };
           
           // Show toast when starting a new chapter
@@ -523,18 +527,26 @@ const ContentGenerationViewer: React.FC<ContentGenerationViewerProps> = ({
           <>
           </>
         ) : (
-          <button 
-            onClick={handleSaveContent} 
-            disabled={isSaving || completedChapters === 0} 
-            className={`flex items-center justify-center  px-3 py-1  sm:py-2 rounded-md transition-colors duration-150 text-sm sm:text-base ${
-              isSaving || completedChapters === 0 
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-              : 'bg-purple-600 text-white hover:bg-purple-700'
-            }`}
-          >
-           {isSaving ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" /> : <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />}
-           <span className="sm:flex hidden "> {isSaving ? 'Saving...' : 'Save & Exit'} </span>
-          </button>
+        <button 
+  onClick={handleSaveContent} 
+  disabled={isSaving || completedChapters === 0}
+  className={`flex items-center justify-center 
+    px-3 py-2 text-sm  // Mobile base padding and font
+    sm:px-4 sm:py-2.5 sm:text-base // Slightly larger on small screens and up
+    md:px-5 md:py-3 md:text-base // Larger padding and font size on medium screens
+    rounded-md transition-colors duration-150 shadow-md font-medium
+    ${isSaving || completedChapters === 0 
+      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+      : 'bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800'}
+  `}
+>
+  {isSaving ? 
+    <Loader2 className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5 animate-spin" /> : 
+    <Save className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5" />
+  }
+  <span>{isSaving ? 'Saving...' : 'Save'}</span>
+</button>
+
         )}
       </div>
     </div>

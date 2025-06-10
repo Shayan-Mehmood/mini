@@ -45,6 +45,8 @@ import BackButton from "../../../components/ui/BackButton";
 import ImageGallery from "../../../components/AiToolForms/BookCreator/ImageGallery";
 import AdminModel from "../../../components/AdminModel";
 import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
+import CoverImageEditor from '../../../components/CoverImageEditor/CoverImageEditor';
+
 
 interface QuillEditor {
   getContents: () => Delta;
@@ -109,10 +111,7 @@ const EditCoursePage = () => {
   const [quizMessage, setQuizMessage] = useState("");
   const [coverMode, setCoverMode] = useState(false);
   const [aiImage, setAiIMage] = useState<string | null>(null);
-  // Add to your existing state variables
 
-  // const toggleQuizModal = () => setOpenQuizModal(!OpenQuizModal);
-  // const toggleAdminModel = () => setOpenAdminModel(!OpenAdminModal);
 
   const {
     isFirstView,
@@ -281,10 +280,10 @@ const EditCoursePage = () => {
           <div className="shrink-0 w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           <div>
             <p className="text-sm font-medium text-purple-700">
-              Generating course cover...
+              Generating cover...
             </p>
             <p className="text-xs text-purple-600">
-              We're creating a beautiful cover for your course
+              We're creating a beautiful cover for your content
             </p>
           </div>
         </div>
@@ -1350,35 +1349,34 @@ const EditCoursePage = () => {
     // Stay on the page
   };
 
-
   const handleEnhanceText = async (selectedText: string, fullContent: string) => {
-  try {
-    // Show loading toast
-    const loadingToast = toast.loading("Enhancing text with AI...");
-    
-    // Call the API to enhance the text
-    const response = await apiService.post("/ai/enhance-text", {
-      selectedText,
-      fullContent,
-      contentType: "course",
-      contentId: id
-    });
-    
-    // Close loading toast
-    toast.dismiss(loadingToast);
-    
-    if (response.success && response.data) {
-      toast.success("Text enhanced successfully!");
-      return response.data.enhancedText;
-    } else {
-      throw new Error(response.message || "Failed to enhance text");
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Enhancing text with AI...");
+
+      // Call the API to enhance the text
+      const response = await apiService.post("/ai/enhance-text", {
+        selectedText,
+        fullContent,
+        contentType: "course",
+        contentId: id
+      });
+
+      // Close loading toast
+      toast.dismiss(loadingToast);
+
+      if (response.success && response.data) {
+        toast.success("Text enhanced successfully!");
+        return response.data.enhancedText;
+      } else {
+        throw new Error(response.message || "Failed to enhance text");
+      }
+    } catch (error) {
+      console.error("Error enhancing text:", error);
+      toast.error("Failed to enhance text. Please try again.");
+      return selectedText; // Return original text if enhancement fails
     }
-  } catch (error) {
-    console.error("Error enhancing text:", error);
-    toast.error("Failed to enhance text. Please try again.");
-    return selectedText; // Return original text if enhancement fails
-  }
-};
+  };
 
   const handleChapterHeadingEdit = async (
     chapter: string,
@@ -1455,6 +1453,106 @@ const EditCoursePage = () => {
       handleAddCoverImage(imageUrl);
     }
   };
+
+  // Add this function to extract image URL from cover content
+  const extractCoverImageUrl = (coverContent: string): string => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(coverContent, 'text/html');
+      const imgElement = doc.querySelector('img');
+      return imgElement?.getAttribute('src') || '';
+    } catch (error) {
+      console.error('Error extracting cover image URL:', error);
+      return '';
+    }
+  };
+
+  // Add this handler for saving edited cover image
+  const handleCoverImageEdit = (editedImageUrl: string) => {
+
+    console.log(editedImageUrl, "Edited cover image URL");
+
+    const isCoverImage =
+      selectedChapterIndex !== -1 &&
+      chapters[selectedChapterIndex] &&
+      ((typeof chapters[selectedChapterIndex] === "string" &&
+        isCoverChapter(chapters[selectedChapterIndex])) ||
+        (typeof chapters[selectedChapterIndex] === "object" &&
+          "content" in chapters[selectedChapterIndex] &&
+          isCoverChapter(
+            (chapters[selectedChapterIndex] as { content?: string }).content ??
+              ""
+          )));
+
+    // If this is a cover image, use the cover image handler
+    if (isCoverImage) {
+      // Close the editor first
+      setOpenEditor(false);
+      setCurrentEditingImage(null);
+
+      // Then update the cover with the edited image
+      handleAddCoverImage(editedImageUrl);
+      return;
+    }
+    // Generate new cover content with the edited image URL
+    // const newCoverContent = generateCoverContent(editedImageUrl);
+    
+    // // Update selected chapter content
+    // setSelectedChapter(newCoverContent);
+    
+    // // Save changes
+    // handleSave(false);
+  };
+
+  // Add this to check if current chapter is a cover
+  const isCurrentChapterCover = () => {
+    if (selectedChapterIndex === -1) return false;
+    
+    const currentChapter = chapters[selectedChapterIndex];
+    if (typeof currentChapter === 'string') {
+      return isCoverChapter(currentChapter);
+    } else if (currentChapter && typeof currentChapter === 'object' && 'content' in currentChapter) {
+      return isCoverChapter(currentChapter.content);
+    }
+    return false;
+  };
+
+  // Then in the return/render section, replace the RichTextEditor with conditional rendering:
+  {/* In your main content area, where the RichTextEditor is rendered */}
+  {isCurrentChapterCover() ? (
+    <div className="flex-1">
+      {/* <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+        <h3 className="text-lg font-semibold text-purple-800 mb-2 flex items-center">
+          <Image className="w-5 h-5 mr-2" />
+          Cover Image Editor
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Edit your cover image directly. Changes will be saved automatically.
+        </p>
+      </div>
+       */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <ImageEditor
+          initialImageUrl={extractCoverImageUrl(selectedChapter)}
+          onSave={handleCoverImageEdit}
+          isCoverEdit={true}
+        />
+      </div>
+    </div>
+  ) : (
+    <div className="flex-1">
+      <RichTextEditor
+        ref={quillRef}
+        initialContent={selectedChapter}
+        imageUrl={aiImage}
+        id={Number(id)}
+        onContentChange={handleContentChange}
+        onSave={() => handleSave(false)}
+        onImageClick={handleImageClick}
+        onEnhanceText={handleEnhanceText}
+      />
+    </div>
+  )}
 
   if (loading || convertingBlob)
     return (
@@ -1825,7 +1923,7 @@ const EditCoursePage = () => {
           <div className="w-full h-full overflow-hidden flex flex-col">
             {/* Rich text editor */}
             <div className="flex-grow overflow-auto pb-20 md:pb-0">
-              {selectedChapter ? (
+              {/* {selectedChapter ? (
                 <RichTextEditor
                   ref={quillRef}
                   initialContent={selectedChapter}
@@ -1855,7 +1953,56 @@ const EditCoursePage = () => {
                   </div>
                 </div>
               )}
-              
+               */}
+
+               {isCurrentChapterCover() ? (
+  <div className="flex-1">
+   
+    <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
+      <CoverImageEditor
+        imageUrl={extractCoverImageUrl(selectedChapter)}
+ onSave={(editedImageUrl) => {
+          console.log("Cover image edited, updating...");
+          handleCoverImageEdit(editedImageUrl);
+        }}      />
+    </div>
+  </div>
+) : !selectedChapter ? (
+  <>
+
+    <div className="flex flex-col items-center justify-center h-[40vh] md:h-[50vh] text-center p-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 mb-3 md:mb-4 text-purple-300">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+  </>
+) : (
+  <div className="flex-1">
+    <RichTextEditor
+      ref={quillRef}
+      initialContent={selectedChapter}
+      imageUrl={aiImage}
+      id={Number(id)}
+      onContentChange={handleContentChange}
+      onSave={() => handleSave(false)}
+      onImageClick={handleImageClick}
+      onEnhanceText={handleEnhanceText}
+    />
+  </div>
+)}
+
 
               {/* Quiz display area */}
               {chapterQuiz && chapterQuiz.length > 0 && (
@@ -1960,14 +2107,19 @@ const EditCoursePage = () => {
         />
       </Modal>
 
-      <Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Admin">
-        <AdminModel
-          iframeLink={`<iframe src="https://app.minilessonsacademy.com/shared/course/${id}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`}
-          preview={`/shared/course/${id}`}
-          // selectedChapter={selectedChapter}
-          onSave={embedContent}
-        />
-      </Modal>
+      
+
+
+<Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Content Sharing & Embedding">
+  <AdminModel
+    iframeLink={`<iframe src="https://app.minilessonsacademy.com/shared/course/${id}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`}
+    preview={`/shared/course/${id}`}
+    onSave={embedContent}
+    contentId={id || ""}
+    contentType="course"
+    initialIsPublic={courseData?.is_shared || false}
+  />
+</Modal>
 
       <AlertDialog
         isOpen={showLeaveConfirmation}

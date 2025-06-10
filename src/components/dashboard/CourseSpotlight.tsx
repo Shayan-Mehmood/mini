@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import asset1 from '../../../public/images/assets1.png';
+import asset2 from '../../../public/images/assets2.webp';
+import asset3 from '../../../public/images/assets3.png';
+import asset4 from '../../../public/images/assets4.webp';
+import asset5 from '../../../public/images/assets5.png';
+import asset6 from '../../../public/images/assets6.webp';
+import asset7 from '../../../public/images/assets7.png'
+import asset8 from '../../../public/images/assets8.webp';
 
 interface SpotlightItem {
   id: number;
@@ -17,8 +25,9 @@ const CourseSpotlight: React.FC = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next');
+  const [imageLoadingStates, setImageLoadingStates] = useState<{[key: number]: boolean}>({});
   const flipContainerRef = useRef<HTMLDivElement>(null);
-
+  const isMobile = window.innerWidth < 768;
   // Sample data with both courses and books
   const spotlightItems: SpotlightItem[] = [
     {
@@ -26,7 +35,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Course',
       title: 'Harmony of the Soul: Exploring Mindful Faith',
       creator: 'Serena Delgado',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2024/10/C1.png',
+      image: asset1,
       whatsInside: [
         'A gentle exploration of spiritual practices and faith-based mindfulness techniques',
         'Daily meditations, reflective journaling, and uplifting group discussions',
@@ -43,7 +52,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Book',
       title: 'The Enchanted Lighthouse',
       creator: 'Bella Dawes',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2025/03/B1-768x994.png',
+      image: asset2,
       whatsInside: [
         'A magical adventure where siblings discover a lighthouse that glows with enchanted light',
         'Whimsical sea creatures, secret tunnels, and hidden treasures',
@@ -60,7 +69,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Course',
       title: 'Taste the World: Global Cuisine for Home Cooks',
       creator: 'Mia Romano',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2024/10/C2.png',
+      image: asset3,
       whatsInside: [
         'Step-by-step recipes from different cultures (Italian, Thai, Mexican, etc.)',
         'Tips on spices, flavor combinations, and cooking techniques',
@@ -77,7 +86,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Book',
       title: 'Shadows in the Reflection',
       creator: 'Conrad Miller',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2025/03/B2-768x994.png',
+      image: asset4,
       whatsInside: [
         'A gripping story of a detective haunted by strange reflections in mirrors',
         'Twists and turns as hidden secrets from the past come to light',
@@ -94,7 +103,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Course',
       title: 'How To Be A Social Media Wizard',
       creator: 'Travis Neal',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2024/10/C3.png',
+      image: asset5,
       whatsInside: [
         'Practical guides to building a strong brand presence on major social platforms',
         'Content creation tips, including video and storytelling hacks',
@@ -111,7 +120,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Book',
       title: 'Wish Upon the Wildflowers',
       creator: 'Eleanor Park',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2025/03/B3-768x994.png',
+      image: asset6,
       whatsInside: [
         'A heartfelt love story set in a quaint countryside town',
         'Two strangers brought together by a forgotten wildflower field',
@@ -128,7 +137,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Course',
       title: 'From Sketch to Screen',
       creator: 'Jade Carter',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2024/10/C4.png',
+      image: asset7,
       whatsInside: [
         'Basics of digital illustration software and tablet drawing',
         'Fun exercises for character design, color theory, and layering',
@@ -145,7 +154,7 @@ const CourseSpotlight: React.FC = () => {
       type: 'Book',
       title: 'Starsong Academy',
       creator: 'Zeke Williams',
-      image: 'https://minilessonsacademy.com/wp-content/uploads/2025/03/B4-768x994.png',
+      image: asset8,
       whatsInside: [
         'A futuristic boarding school for kids gifted in astronomy and space technology',
         'Rivalry, friendship, and cosmic challenges as they learn to pilot starships',
@@ -158,6 +167,14 @@ const CourseSpotlight: React.FC = () => {
       ]
     }
   ];
+
+  // Preload images for better performance
+  useEffect(() => {
+    spotlightItems.forEach((item) => {
+      const img = new Image();
+      img.src = item.image;
+    });
+  }, []);
 
   // Set up auto-rotation if enabled
   useEffect(() => {
@@ -202,15 +219,38 @@ const CourseSpotlight: React.FC = () => {
   const currentItem = spotlightItems[currentIndex];
   const nextItem = nextIndex !== null ? spotlightItems[nextIndex] : null;
 
+  const handleImageLoad = (itemId: number) => {
+    setImageLoadingStates(prev => ({ ...prev, [itemId]: false }));
+  };
+
+  const handleImageLoadStart = (itemId: number) => {
+    setImageLoadingStates(prev => ({ ...prev, [itemId]: true }));
+  };
+
   const renderContentCard = (item: SpotlightItem, isBack: boolean = false) => {
+    const isLoading = imageLoadingStates[item.id];
+    
     return (
       <div className="flex flex-col lg:flex-row h-full">
         {/* Image Section */}
-        <div className="lg:w-1/2 relative overflow-hidden h-full lg:h-auto">
+        <div className="lg:w-1/2 relative lg:overflow-hidden h-[740px] lg:h-auto">
+          {/* Loading skeleton */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+              <div className="text-gray-400 text-lg">Loading...</div>
+            </div>
+          )}
+          
           <img
             src={item.image}
             alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+            className={`w-full h-full object-cover transition-all duration-700 hover:scale-105 ${
+              isLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onLoadStart={() => handleImageLoadStart(item.id)}
+            onLoad={() => handleImageLoad(item.id)}
+            onError={() => handleImageLoad(item.id)}
+            loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
         </div>
@@ -312,7 +352,7 @@ const CourseSpotlight: React.FC = () => {
               }`}
               style={{ 
                 transformStyle: 'preserve-3d',
-                minHeight: '800px',
+                minHeight: isMobile ? '1200px' : '800px',
               }}
             >
               {/* Front face - Current item */}

@@ -9,6 +9,7 @@ import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "react-hot-toast";
 import PublicLayout from "./layout/PublicLayout";
 import ResetPasswordForm from "./components/auth/ResetPasswordForm";
+import GoogleCallback from "./components/auth/GoogleCallback";
 import TermsAndPrivacypage from "./pages/TermsAndPrivacy";
 import DashboardLayout from "./layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard/Dashboard";
@@ -33,10 +34,12 @@ import MarketingResources from "./pages/Dashboard/MarketingResources";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import EmailCampaign from "./pages/Dashboard/CourseCreatorPage/EmailCampaign";
 import AICoach from "./pages/Dashboard/AiCoach";
+import SetPasswordForm from "./components/auth/SetPasswordForm";
 import Profile from "./pages/Dashboard/Profile";
-import DocumentUploadCreator from "./components/ContentGeneration/DocumentUploadCreator";
 import QuickCourseCreator from "./components/ContentGeneration/QuickCourseCreator";
+import DocumentUploadCreator from "./components/ContentGeneration/DocumentUploadCreator";
 import { useChargebee } from './hooks/useChargebee';
+import BookACallPage from "./pages/Dashboard/BookACall";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -48,85 +51,84 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-    useChargebee();
 
 
   // Check for token in URL on component mount or URL change
-  useEffect(() => {
-    const checkForToken = () => {
-      const queryParams = new URLSearchParams(window.location.search);
-      const localtToken = localStorage.getItem('authToken');
+  // useEffect(() => {
+  //   const checkForToken = () => {
+  //     const queryParams = new URLSearchParams(window.location.search);
+  //     const localtToken = localStorage.getItem('authToken');
 
-      if(localtToken){
-        setToken(localtToken)
-        return;
-      }
+  //     if(localtToken){
+  //       setToken(localtToken)
+  //       return;
+  //     }
 
-      const urlToken = queryParams.get("token");
+  //     const urlToken = queryParams.get("token");
 
-      // Log for debugging
-      console.log("[App] URL check: token exists?", !!urlToken);
+  //     // Log for debugging
+  //     console.log("[App] URL check: token exists?", !!urlToken);
 
-      if (urlToken) {
-        // Capture token and trigger verification process
-        setToken(urlToken);
-        setIsProcessingToken(true);
-      }
-    };
+  //     if (urlToken) {
+  //       // Capture token and trigger verification process
+  //       setToken(urlToken);
+  //       setIsProcessingToken(true);
+  //     }
+  //   };
 
-    checkForToken();
-  }, [location.search]); // Re-run when URL changes
+  //   checkForToken();
+  // }, [location.search]); // Re-run when URL changes
 
   // Handle successful authentication
-  useEffect(() => {
-    if (userData) {
-      console.log("[App] User authenticated:", userData);
+  // useEffect(() => {
+  //   if (userData) {
+  //     console.log("[App] User authenticated:", userData);
 
-      // Store auth data if needed
-      if (userData.token) {
-        localStorage.setItem("authToken", userData.token);
+  //     // Store auth data if needed
+  //     if (userData.token) {
+  //       localStorage.setItem("authToken", userData.token);
 
-        // Fix: JSON stringify the object before storing
-        if (userData.userData) {
-          localStorage.setItem("userData", JSON.stringify(userData.userData));
-          console.log(userData, "=======================>one");
-        } else {
-          // If the userData structure is different (flat structure)
-          const userDataToStore = {
-            id: userData.id || userData.userId,
-            email: userData.email,
-          };
-          localStorage.setItem("userData", JSON.stringify(userDataToStore));
-          // localStorage.setItem("onBoardingCompleted", userData.userData.onboarding_completed)
+  //       // Fix: JSON stringify the object before storing
+  //       if (userData.userData) {
+  //         localStorage.setItem("userData", JSON.stringify(userData.userData));
+  //         console.log(userData, "=======================>one");
+  //       } else {
+  //         // If the userData structure is different (flat structure)
+  //         const userDataToStore = {
+  //           id: userData.id || userData.userId,
+  //           email: userData.email,
+  //         };
+  //         localStorage.setItem("userData", JSON.stringify(userDataToStore));
+  //         // localStorage.setItem("onBoardingCompleted", userData.userData.onboarding_completed)
 
-          console.log(userDataToStore, "=======================>two");
-        }
+  //         console.log(userDataToStore, "=======================>two");
+  //       }
 
-        // Also store the user ID directly for easier access
-        const userId =
-          userData.userData?.id ||
-          userData.id ||
-          userData.userData?.user_id ||
-          userData.userId;
-        if (userId) {
-          localStorage.setItem("userId", userId.toString());
-        }
-      }
+  //       // Also store the user ID directly for easier access
+  //       const userId =
+  //         userData.userData?.id ||
+  //         userData.id ||
+  //         userData.userData?.user_id ||
+  //         userData.userId;
+  //       if (userId) {
+  //         localStorage.setItem("userId", userId.toString());
+  //       }
+  //     }
 
-      // Store email for welcome banner (adjust path according to your structure)
-      setWelcomeEmail(userData?.userData?.email || userData?.email || "");
+  //     // Store email for welcome banner (adjust path according to your structure)
+  //     setWelcomeEmail(userData?.userData?.email || userData?.email || "");
 
-      // Rest of your code remains the same
-      const redirectPath = userData?.userData?.onBoardingCompleted
-        ? "/dashboard"
-        : "/onboard";
-      console.log(`[App] Redirecting to: ${redirectPath}`);
+  //     // Rest of your code remains the same
+  //     // const redirectPath = userData?.userData?.onBoardingCompleted
+  //     //   ? "/dashboard"
+  //     //   : "/onboard";
+  //     // console.log(`[App] Redirecting to: ${redirectPath}`);
 
-      navigate(redirectPath, { replace: true });
+  //     // navigate(redirectPath, { replace: true });
 
-      setUserData(null);
-    }
-  }, [userData, navigate]);
+  //     setUserData(null);
+  //   }
+  // }, [userData, navigate]);
 
   // Handle verification success
   const handleVerificationSuccess = (data: any) => {
@@ -167,12 +169,16 @@ function App() {
               <Route path="/login" element={<Authpage />} />
               <Route path="/sign-up" element={<SignUpPage />} />
               <Route path="/reset-password" element={<ResetPasswordForm />} />
+              <Route path="/set-password/:userId" element={<SetPasswordForm />} />
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
               <Route
                 path="/terms-and-privacy"
                 element={<TermsAndPrivacypage />}
               />
-            </Route>
+              <Route path="/shared/:type/:id" element={<SharedContent />} />  
 
+            </Route>
+          
             {/* Dashboard Layout */}
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
@@ -234,6 +240,10 @@ function App() {
                     path="/dashboard/profile"
                     element={<Profile />}
                 />
+                <Route
+                  path="/dashboard/book-a-call"
+                  element={<BookACallPage />}
+                />
 
                
                 <Route path="/onboard" element={<OnboardingFlow />} />
@@ -245,10 +255,9 @@ function App() {
                   element={<ContentGenerationStepper />}  
                 />
                 <Route path="/create/by-document" element={<DocumentUploadCreator />} />
-                                <Route path="/create/one-click-creator" element={<QuickCourseCreator />} />
+                <Route path="/create/one-click-creator" element={<QuickCourseCreator/>} />
               </Route>
             </Route>
-            <Route path="/shared/:type/:id" element={<SharedContent />} />
            
             {/* Other routes */}
           </Routes>

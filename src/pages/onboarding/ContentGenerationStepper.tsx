@@ -27,6 +27,7 @@ import '../../index.css';
 import DocumentUploadCreator from "../../components/ContentGeneration/DocumentUploadCreator";
 import QuickCourseCreator from "../../components/ContentGeneration/QuickCourseCreator";
 import { renderTopStepsTimeline } from "../../components/ContentGeneration/ContentTimelineStepper";
+import CreationOptions from "../../components/ContentGeneration/CreationOptions";
 
 // Update ContentData type to include summary
 export type ContentData = {
@@ -37,6 +38,10 @@ export type ContentData = {
   summary: string;
   chapter_titles: [];
   numOfChapters: number;
+  toggles?: {
+    includeCitations: boolean;
+    // Add other toggles here as needed
+  };
 };
 
 // Creation methods enum
@@ -81,6 +86,9 @@ const ContentGenerationStepper = () => {
       summary: "",
       chapter_titles: [],
       numOfChapters: 3,
+      toggles: {
+        includeCitations: false
+      }
     };
 
     return savedData ? JSON.parse(savedData) : defaultData;
@@ -456,6 +464,16 @@ const ContentGenerationStepper = () => {
     }
   };
 
+  const handleToggleChange = (toggleId: string, value: boolean) => {
+    setContentData((prev) => ({
+      ...prev,
+      toggles: {
+        ...prev.toggles,
+        [toggleId]: value,
+      },
+    } as any));
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 0:
@@ -470,6 +488,8 @@ const ContentGenerationStepper = () => {
           <BookDetailsStep
             selectedDetails={contentData.details}
             onChange={handleDetailChange}
+            onToggleChange={handleToggleChange}
+            toggles={contentData.toggles}
           />
         );
       case 2:
@@ -505,6 +525,7 @@ const ContentGenerationStepper = () => {
               contentType={contentData.purpose}
               contentCategory={contentData.category}
               contentDetails={contentData.details}
+              includeCitations={contentData.toggles?.includeCitations || false}
               onBack={() => setCurrentStep(3)}
             />
           );
@@ -518,6 +539,7 @@ const ContentGenerationStepper = () => {
             contentType={contentData.purpose}
             contentCategory={contentData.category}
             contentDetails={contentData.details}
+            includeCitations={contentData.toggles?.includeCitations || false}
             onBack={() => setCurrentStep(isBookContent ? 4 : 3)}
           />
         );
@@ -528,146 +550,6 @@ const ContentGenerationStepper = () => {
 
  
   
-  // Render method selection cards
-  const renderCreationOptions = () => {
-  return (
-    <div className="px-4  min-h-screen py-8 sm:px-6 md:px-10 lg:px-12 max-w-6xl mx-auto">
-      <div className="mb-10 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-          Create New Content
-        </h2>
-        <p className="text-base text-gray-600">
-          Choose how you'd like to begin creating your content
-        </p>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Card Template */}
-        {[
-          {
-            title: "Guided Creation",
-            subtitle: "Step-by-Step Wizard",
-            description:
-              "Create detailed, customized content with our guided assistant. Ideal for in-depth courses and books.",
-            colorFrom: "from-purple-500",
-            colorTo: "to-purple-700",
-            icon: <BookType className="h-5 w-5" />,
-            buttonText: "Start Guided Creation",
-            buttonColor: "bg-purple-500 hover:bg-purple-600",
-            features: [
-              "Multiple customization options",
-              "Fine-tune each chapter",
-              "Best for detailed content",
-            ],
-            onClick: () => {
-              setCreationMethod(CreationMethod.WIZARD);
-              setCurrentStep(0);
-            },
-            buttonIcon: <ChevronRight className="w-4 h-4" />,
-            // hoverBorder: "hover:border-purple-300",
-          },
-          {
-            title: "Document Upload",
-            subtitle: "Use Existing Document",
-            description:
-              "Convert your existing document into an interactive course. Upload PDF or DOCX files.",
-           colorFrom: "from-purple-500",
-            colorTo: "to-purple-700",
-            icon: <Upload className="h-5 w-5" />,
-            buttonText: "Upload Document",
-            buttonColor: "bg-purple-500 hover:bg-purple-600",
-            features: [
-              "Turn existing materials into courses",
-              "Automatic content extraction",
-              "Keep your original formatting",
-            ],
-            onClick: () => setCreationMethod(CreationMethod.UPLOAD),
-            buttonIcon: <Upload className="w-4 h-4" />,
-            // hoverBorder: "hover:border-blue-300",
-          },
-          {
-            title: "Quick Creator",
-            subtitle: "One-Click Course",
-            description:
-              "Generate a complete course instantly with just a prompt. Perfect when you need content quickly.",
-            colorFrom: "from-purple-500",
-            colorTo: "to-purple-700",
-            icon: <Zap className="h-5 w-5" />,
-            buttonText: "Create Instantly",
-            buttonColor: "bg-purple-500 hover:bg-purple-600",
-            features: [
-              "Fastest content creation option",
-              "AI-generated structure and content",
-              "Just provide a topic or title",
-            ],
-            onClick: () => setCreationMethod(CreationMethod.QUICK),
-            buttonIcon: <Zap className="w-4 h-4" />,
-            // hoverBorder: "hover:border-amber-300",
-          },
-        ].map(
-          (
-            {
-              title,
-              subtitle,
-              description,
-              icon,
-              colorFrom,
-              colorTo,
-              buttonText,
-              buttonColor,
-              features,
-              onClick,
-              buttonIcon,
-              // hoverBorder,
-            },
-            index
-          ) => (
-            <div
-              key={index}
-              className={`bg-white shadow-md border border-gray-200 transition-all duration-300  hover:shadow-xl flex flex-col`}
-            >
-              <div
-                className={`bg-gradient-to-r ${colorFrom} ${colorTo} p-4 text-white flex justify-between items-center`}
-              >
-                <h3 className="font-semibold text-white text-base">{title}</h3>
-                {icon}
-              </div>
-
-              <div className="p-6 flex flex-col justify-between flex-grow">
-                <div className="mb-6 space-y-2">
-                  <h4 className="text-lg font-medium text-gray-800">
-                    {subtitle}
-                  </h4>
-                  <p className="text-sm text-gray-600">{description}</p>
-                </div>
-
-                <ul className="space-y-2 mb-6">
-                  {features.map((feature, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center text-sm text-gray-600"
-                    >
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={onClick}
-                  className={`w-full ${buttonColor} text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors`}
-                >
-                  {buttonText}
-                  {buttonIcon}
-                </button>
-              </div>
-            </div>
-          )
-        )}
-      </div>
-    </div>
-  );
-};
 
 
   // Success state for completed content creation
@@ -732,7 +614,7 @@ const ContentGenerationStepper = () => {
   } else if (creationMethod === CreationMethod.QUICK) {
     return navigate('one-click-creator');
   } else if (creationMethod === CreationMethod.NONE) {
-    return renderCreationOptions();
+    return <CreationOptions onMethodSelect={setCreationMethod} />;
   }
 
 

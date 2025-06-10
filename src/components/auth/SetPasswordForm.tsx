@@ -1,26 +1,27 @@
 
-import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router";
+import React, { useEffect, useState } from "react";
+import { NavLink, useNavigate, useParams } from "react-router";
 import apiService from "../../utilities/service/api";
 import { toast } from "react-hot-toast";
 
-const ResetPasswordForm: React.FC = () => {
+const SetPasswordForm: React.FC = () => {
   const navigate = useNavigate();
+  const { userId } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
+  const [userName, setUserName] = useState("");
   const [formData, setFormData] = useState({
-    email: "",
     newPassword: "",
     confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({
-    email: "",
     newPassword: "",
     confirmPassword: "",
   });
 
   const [message, setMessage] = useState("");
-
   const [passwordType, setPasswordType] = useState<"password" | "text">("password");
 
   // Handle input change
@@ -31,15 +32,49 @@ const ResetPasswordForm: React.FC = () => {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
+  // Fetch user details when component mounts
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!userId) {
+        toast.error("Invalid user ID");
+        navigate("/login");
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response: any = await apiService.get(`auth/user/${userId}`);
+        
+        if (response.success) {
+          setUserEmail(response.user.email);
+          setUserName(`${response.user.firstName} ${response.user.lastName}`.trim());
+          
+          // Check if user already has a password
+          if (response.user.hasPassword) {
+            toast.error("Password already set for this user");
+            navigate("/login");
+            return;
+          }
+        } else {
+          toast.error(response.message || "User not found");
+          navigate("/login");
+        }
+      } catch (error: any) {
+        console.error("Error fetching user details:", error);
+        toast.error("Failed to load user details");
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, [userId, navigate]);
+
   // Validate form
   const validateForm = () => {
     let isValid = true;
-    let newErrors = { email: "", newPassword: "", confirmPassword: "" };
-
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Your email is invalid.";
-      isValid = false;
-    }
+    let newErrors = { newPassword: "", confirmPassword: "" };
 
     if (formData.newPassword.length < 8) {
       newErrors.newPassword = "Password must be at least 8 characters.";
@@ -63,26 +98,26 @@ const ResetPasswordForm: React.FC = () => {
 
     setIsSubmitting(true);
     setMessage("");
-    setErrors({ email: "", newPassword: "", confirmPassword: "" });
+    setErrors({ newPassword: "", confirmPassword: "" });
 
     try {
-      const response: any = await apiService.post("auth/reset-password", {
-        email: formData.email,
+      const response: any = await apiService.post("auth/set-password", {
+        userId: userId,
         password: formData.newPassword,
       },{});
       
       if (response.success) {
-        toast.success(response.message || "Password reset successfully!");
-        setMessage("Password reset successfully! Redirecting to login...");
+        toast.success(response.message || "Password set successfully!");
+        setMessage("Password set successfully! Redirecting to login...");
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       } else {
-        toast.error(response.message || "Failed to reset password");
-        setMessage(response.message || "Failed to reset password");
+        toast.error(response.message || "Failed to set password");
+        setMessage(response.message || "Failed to set password");
       }
     } catch (error: any) {
-      console.error("Error during password reset:", error);
+      console.error("Error during password setting:", error);
       
       let errorMessage = "An unexpected error occurred. Please try again.";
       
@@ -103,6 +138,22 @@ const ResetPasswordForm: React.FC = () => {
     setPasswordType((prev) => (prev === "password" ? "text" : "password"));
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full px-8 md:w-1/2 mx-auto my-4">
+        <div className="flex justify-center">
+          <NavLink to="/">
+            <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
+          </NavLink>
+        </div>
+        <div className="mt-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading user details...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-8 md:w-1/2 mx-auto my-4">
       <div className="flex justify-center">
@@ -110,8 +161,19 @@ const ResetPasswordForm: React.FC = () => {
           <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
         </NavLink>
       </div>
-      <h2 className="mt-6 text-2xl font-bold text-gray-900 text-center">Reset Your Password</h2>
-      <p className="text-base text-gray-600 mt-2 text-center">Enter your email and a new password.</p>
+      <h2 className="mt-6 text-2xl font-bold text-gray-900 text-center">Set Your Password</h2>
+      <p className="text-base text-gray-600 mt-2 text-center">
+        Welcome {userName}! Set your password to complete your account setup.
+      </p>
+
+      {/* User Info Display */}
+      {userEmail && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Account:</strong> {userEmail}
+          </p>
+        </div>
+      )}
 
       {message && (
         <div className={`mt-4 p-3 rounded-md text-center ${
@@ -125,28 +187,10 @@ const ResetPasswordForm: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="mt-5">
         <div className="space-y-4">
-          {/* Email Field */}
-          <div>
-            <label htmlFor="email" className="font-medium text-gray-600">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email address"
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                errors.email 
-                  ? "border-red-500 focus:ring-red-200" 
-                  : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
-              }`}
-            />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-          </div>
 
           {/* New Password Field */}
           <div>
-            <label htmlFor="newPassword" className="font-medium text-gray-600">New Password</label>
+            <label htmlFor="newPassword" className="font-medium text-gray-600">Password</label>
             <div className="relative">
               <input
                 type={passwordType}
@@ -154,7 +198,7 @@ const ResetPasswordForm: React.FC = () => {
                 name="newPassword"
                 value={formData.newPassword}
                 onChange={handleChange}
-                placeholder="Enter new password (min 8 characters)"
+                placeholder="Enter your password (min 8 characters)"
                 className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors pr-12 ${
                   errors.newPassword 
                     ? "border-red-500 focus:ring-red-200" 
@@ -163,7 +207,7 @@ const ResetPasswordForm: React.FC = () => {
               />
               <button
                 type="button"
-                className="absolute top-5 right-4  text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute top-5 right-4 text-gray-400 hover:text-gray-600 transition-colors"
                 onClick={togglePasswordType}
                 aria-label={passwordType === "password" ? "Show password" : "Hide password"}
               >
@@ -179,7 +223,7 @@ const ResetPasswordForm: React.FC = () => {
                 )}
               </button>
             </div>
-            {errors.newPassword && <p className="text-red-500 text-sm">{errors.newPassword}</p>}
+            {errors.newPassword && <p className="text-red-500 text-sm mt-1">{errors.newPassword}</p>}
           </div>
 
           {/* Confirm Password Field */}
@@ -191,14 +235,14 @@ const ResetPasswordForm: React.FC = () => {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder="Confirm your new password"
+              placeholder="Confirm your password"
               className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                 errors.confirmPassword 
                   ? "border-red-500 focus:ring-red-200" 
                   : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
               }`}
             />
-            {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
+            {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
           </div>
         </div>
 
@@ -215,19 +259,19 @@ const ResetPasswordForm: React.FC = () => {
           {isSubmitting ? (
             <span className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Resetting Password...
+              Setting Password...
             </span>
           ) : (
-            "Reset Password"
+            "Set Password"
           )}
         </button>
       </form>
 
       <p className="mt-5 text-center text-gray-600">
-        Go Back? <NavLink className="text-blue-600" to="/login">Login</NavLink>
+        Already have an account? <NavLink className="text-blue-600 hover:text-blue-800 transition-colors" to="/login">Login</NavLink>
       </p>
     </div>
   );
 };
 
-export default ResetPasswordForm;
+export default SetPasswordForm;

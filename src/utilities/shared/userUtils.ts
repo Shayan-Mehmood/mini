@@ -20,7 +20,6 @@ export const getUserData = () => {
  */
 export const getUserId = (): string | number | null => {
   const userData = getUserData();
-  
   // Return user_id from the stored structure
   if (userData?.userData?.user_id) {
     return userData.userData.user_id;

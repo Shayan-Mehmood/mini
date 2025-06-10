@@ -43,6 +43,8 @@ import ImageGallery from "../../../components/AiToolForms/BookCreator/ImageGalle
 import AdminModel from "../../../components/AdminModel";
 import ChapterQuizDisplay from "../../../components/ChapterQuizDisplay";
 import { useFirstViewImageGeneration } from "../../../hooks/useFirstViewImageGeneration";
+import CoverImageEditor from '../../../components/CoverImageEditor/CoverImageEditor';
+
 
 interface QuillEditor {
   getContents: () => Delta;
@@ -120,7 +122,6 @@ const EditBookCreator = () => {
     manuallyGenerateImage,
   } = useFirstViewImageGeneration(id);
 
-  // Add a single useEffect to automatically apply the cover image when it's available from the hook
   // Add a single useEffect to automatically apply the cover image when it's available from the hook
   useEffect(() => {
     // Skip if any of these conditions are met:
@@ -279,10 +280,10 @@ const EditBookCreator = () => {
           <div className="shrink-0 w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           <div>
             <p className="text-sm font-medium text-purple-700">
-              Generating course cover...
+              Generating cover...
             </p>
             <p className="text-xs text-purple-600">
-              We're creating a beautiful cover for your course
+              We're creating a beautiful cover for your content
             </p>
           </div>
         </div>
@@ -457,6 +458,57 @@ const EditBookCreator = () => {
       setOperationInProgress(false);
     }
   };
+
+  // Add this to check if current chapter is a cover
+const isCurrentChapterCover = () => {
+  if (selectedChapterIndex === -1) return false;
+  
+  const currentChapter = chapters[selectedChapterIndex];
+  if (typeof currentChapter === 'string') {
+    return isCoverChapter(currentChapter);
+  } else if (currentChapter && typeof currentChapter === 'object' && 'content' in currentChapter) {
+    return isCoverChapter(currentChapter.content);
+  }
+  return false;
+};
+
+// Add this function to extract image URL from cover content
+const extractCoverImageUrl = (coverContent: string): string => {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(coverContent, 'text/html');
+    const imgElement = doc.querySelector('img');
+    return imgElement?.getAttribute('src') || '';
+  } catch (error) {
+    console.error('Error extracting cover image URL:', error);
+    return '';
+  }
+};
+
+// Add this handler for saving edited cover image
+const handleCoverImageEdit = (editedImageUrl: string) => {
+  const isCoverImage =
+    selectedChapterIndex !== -1 &&
+    chapters[selectedChapterIndex] &&
+    ((typeof chapters[selectedChapterIndex] === "string" &&
+      isCoverChapter(chapters[selectedChapterIndex])) ||
+      (typeof chapters[selectedChapterIndex] === "object" &&
+        "content" in chapters[selectedChapterIndex] &&
+        isCoverChapter(
+          (chapters[selectedChapterIndex] as { content?: string }).content ??
+            ""
+        )));
+
+  // If this is a cover image, use the cover image handler
+  if (isCoverImage) {
+    // Close the editor first
+    setOpenEditor(false);
+    setCurrentEditingImage(null);
+
+    // Then update the cover with the edited image
+    handleAddCoverImage(editedImageUrl);
+  }
+};
 
   const toggleGallery = () => setIsGalleryVisible(!isGalleryVisible);
   useEffect(() => {
@@ -794,6 +846,8 @@ const EditBookCreator = () => {
 
   const handleEnhanceText = async (selectedText: string, fullContent: string) => {
   try {
+    // Show loading toast
+    const loadingToast = toast.loading("Enhancing text with AI...");
     
     // Call the API to enhance the text
     const response = await apiService.post("/ai/enhance-text", {
@@ -802,7 +856,10 @@ const EditBookCreator = () => {
       contentType: "book",
       contentId: id
     });
-        
+    
+    // Close loading toast
+    toast.dismiss(loadingToast);
+    
     if (response.success && response.data) {
       toast.success("Text enhanced successfully!");
       return response.data.enhancedText;
@@ -1788,82 +1845,96 @@ const EditBookCreator = () => {
             className={`p-2 sm:p-4 md:p-6 bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ease-in-out w-full 
               ${isGalleryVisible ? "md:flex-1" : "w-full"}`}
           >
-            <div className="w-full h-full overflow-hidden flex flex-col">
-              {/* Rich text editor */}
-              <div className="flex-grow overflow-auto pb-20 md:pb-0">
-                {selectedChapter ? (
-                  <RichTextEditor
-                    ref={quillRef}
-                    initialContent={selectedChapter}
-                    imageUrl={AIImage}
-                    id={Number(id)}
-                    onContentChange={handleContentChange}
-                    onSave={() => handleSave(false)}
-                    onImageClick={handleImageClick}
-                    onEnhanceText={handleEnhanceText}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[40vh] md:h-[50vh] text-center p-4">
-                    <div className="w-12 h-12 md:w-16 md:h-16 mb-3 md:mb-4 text-purple-300">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
-                    <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">
-                      No Chapter Selected
-                    </h2>
-                    <p className="text-sm text-gray-500 max-w-md">
-                      {isGalleryVisible
-                        ? "Please select a chapter from the side panel to start editing its content."
-                        : "Click the chapters button to view and select a chapter."}
-                    </p>
-                    {!isGalleryVisible && (
-                      <button
-                        onClick={toggleGallery}
-                        className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
-                      >
-                        <Book className="w-4 h-4" />
-                        Show Chapters
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+        
 
-              {/* Quiz display area */}
-              {chapterQuiz && chapterQuiz.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <ChapterQuizDisplay
-                    quizContent={chapterQuiz}
-                    quizMessage={quizMessage}
-                  />
-                </div>
-              )}
+            {/* Replace your existing RichTextEditor section with this */}
+<div className="flex-grow overflow-auto pb-20 md:pb-0">
+  {isCurrentChapterCover() ? (
+    <div className="flex-1">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden p-4">
+        <CoverImageEditor
+          imageUrl={extractCoverImageUrl(selectedChapter)}
+          onSave={(editedImageUrl) => {
+            console.log("Cover image edited, updating...");
+            handleCoverImageEdit(editedImageUrl);
+          }}
+        />
+      </div>
+    </div>
+  ) : !selectedChapter ? (
+    <div className="flex flex-col items-center justify-center h-[40vh] md:h-[50vh] text-center p-4">
+      <div className="w-12 h-12 md:w-16 md:h-16 mb-3 md:mb-4 text-purple-300">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      </div>
+      <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">
+        No Chapter Selected
+      </h2>
+      <p className="text-sm text-gray-500 max-w-md">
+        {isGalleryVisible
+          ? "Please select a chapter from the side panel to start editing its content."
+          : "Click the chapters button to view and select a chapter."}
+      </p>
+      {!isGalleryVisible && (
+        <button
+          onClick={toggleGallery}
+          className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
+        >
+          <Book className="w-4 h-4" />
+          Show Chapters
+        </button>
+      )}
+    </div>
+  ) : (
+    <div className="flex-1">
+      <RichTextEditor
+        ref={quillRef}
+        initialContent={selectedChapter}
+        imageUrl={AIImage}
+        id={Number(id)}
+        onContentChange={handleContentChange}
+        onSave={() => handleSave(false)}
+        onImageClick={handleImageClick}
+        onEnhanceText={handleEnhanceText}
+      />
+    </div>
+  )}
 
-              {currentQuizContent && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold text-primary mb-4">
-                    Chapter Quiz
-                  </h3>
-                  <QuizDisplay
-                    quizContent={currentQuizContent}
-                    onRegenerateQuestion={handleRegenerateQuestion}
-                    regeneratingQuestionIndex={regeneratingQuestionIndex}
-                    onDeleteQuiz={handleDeleteQuiz}
-                  />
-                </div>
-              )}
-            </div>
+  {/* Keep the existing quiz display code */}
+  {chapterQuiz && chapterQuiz.length > 0 && (
+    <div className="mt-6 pt-6 border-t border-gray-200">
+      <ChapterQuizDisplay
+        quizContent={chapterQuiz}
+        quizMessage={quizMessage}
+      />
+    </div>
+  )}
+
+  {currentQuizContent && (
+    <div className="mt-6 pt-6 border-t border-gray-200">
+      <h3 className="text-lg font-semibold text-primary mb-4">
+        Chapter Quiz
+      </h3>
+      <QuizDisplay
+        quizContent={currentQuizContent}
+        onRegenerateQuestion={handleRegenerateQuestion}
+        regeneratingQuestionIndex={regeneratingQuestionIndex}
+        onDeleteQuiz={handleDeleteQuiz}
+      />
+    </div>
+  )}
+</div>
           </div>
         </div>
       </div>
@@ -1936,12 +2007,14 @@ const EditBookCreator = () => {
         />
       </Modal>
 
-      <Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Admin">
+      <Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Content Sharing & Embedding">
         <AdminModel
           iframeLink={`<iframe src="https://app.minilessonsacademy.com/shared/book/${id}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`}
           preview={`/shared/book/${id}`}
-          // selectedChapter={selectedChapter}
           onSave={embedContent}
+          contentId={id || ""}
+          contentType="book"
+          initialIsPublic={courseData?.is_shared || false}
         />
       </Modal>
 

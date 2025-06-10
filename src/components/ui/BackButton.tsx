@@ -49,7 +49,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       variant={variant}
       size={size}
       onClick={handleGoBack}
-      className={`gap-1.5 max-w-[200px] bg-purple-600 text-white`}
+      className={`gap-1.5 max-w-[200px] bg-purple-600 text-[12px] font-medium text-white`}
       {...props}
     >
       <ArrowLeft className={`w-${iconSize/4} h-${iconSize/4}`} />

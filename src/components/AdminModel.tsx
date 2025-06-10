@@ -1,41 +1,75 @@
-import { Clipboard, ExternalLink } from "lucide-react"
+import { Clipboard, ExternalLink, Globe, Lock } from "lucide-react"
 import { ReactElement, JSXElementConstructor, ReactNode, ReactPortal } from "react"
 import '../index.css';
+import ContentVisibilityToggle from "./shared/ContentVisibilityToggle";
 
-const AdminModel = (props: { iframeLink: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; preview: string | URL | undefined; onSave:() => void | null }) => {
+interface AdminModelProps {
+  iframeLink: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined;
+  preview: string | URL | undefined;
+  onSave: () => void | null;
+  contentId: string;
+  contentType: 'book' | 'course';
+  initialIsPublic?: boolean;
+}
+
+const AdminModel = ({
+  iframeLink,
+  preview,
+  onSave,
+  contentId,
+  contentType,
+  initialIsPublic = false
+}: AdminModelProps) => {
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <p className="text-lg font-medium text-gray-800">
-          Copy the code below and paste it into your website to easily display your content.
-        </p>
-        <button
-          className="p-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 rounded-lg text-sm items-center transition-all duration-200 hover:to-purple-800 text-white shadow-[0_4px_10px_-3px_rgba(124,58,237,0.5)] cursor-pointer flex whitespace-nowrap flex-shrink-0"
-          onClick={() => props.onSave()}
-        >
-          <Clipboard className="h-5 w-5 mr-2" />
-          <span>Copy Code</span>
-        </button>
+    <div className="w-full">
+      {/* Content Visibility Section - Simplified */}
+      <div className="mb-3 pb-3 border-b border-gray-200">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Content Visibility</h3>
+        <ContentVisibilityToggle 
+          contentId={contentId}
+          contentType={contentType}
+          initialIsPublic={initialIsPublic}
+          className="w-full"
+        />
       </div>
+      
+      {/* Embed Section - Compact */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-medium text-gray-700">Embed Code</h3>
+          <button
+            className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded flex items-center gap-1 transition-colors"
+            onClick={onSave}
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            <span>Copy</span>
+          </button>
+        </div>
 
-      <div className="border border-gray-300 rounded-lg bg-gray-50 md:m-2 p-6 overflow-auto">
-        <pre className="text-sm text-gray-800 whitespace-pre-wrap break-all">
-          {props?.iframeLink}
-        </pre>
-      </div>
+        <div className="border border-gray-200 rounded bg-gray-50 p-2 mb-3">
+          <pre className="text-xs text-gray-700 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
+            {iframeLink}
+          </pre>
+        </div>
 
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-3 mt-6">
-        <p className="text-sm text-gray-600 self-center">
-          To see how it will appear, click the "Share preview" button.
-        </p>
-        <button 
-          className="px-4 py-2.5 bg-purple-600 text-white rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 shadow-sm flex-shrink-0" 
-          onClick={() => window.open(props.preview, '_blank')}
-        >
-          <ExternalLink className="w-4 h-4 text-white" />
-          <span className="text-sm">Preview</span>
-        </button>
+        {/* Preview button - More compact */}
+        <div className="flex justify-end">
+          <button 
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded flex items-center gap-1 transition-colors" 
+            onClick={() => window.open(preview, '_blank')}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span>Preview</span>
+          </button>
+        </div>
       </div>
+      
+      {/* Warning when content is private - More compact */}
+      {!initialIsPublic && (
+        <div className="mt-3 px-2 py-1.5 bg-amber-50 border border-amber-100 rounded text-xs text-amber-700">
+          Note: Embed code only works with public content.
+        </div>
+      )}
     </div>
   )
 }

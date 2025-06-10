@@ -9,14 +9,19 @@ const baseURL =
 
 const api = axios.create({
   baseURL,
-  timeout: 10000, 
+  timeout: 30000, 
 });
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    // Skip adding Authorization header for auth routes (login, register, etc.)
+    const isAuthRoute = config.url?.includes('auth');
+    
+    if (!isAuthRoute) {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -37,7 +42,7 @@ api.interceptors.response.use(
       // Clear the invalid token
       localStorage.removeItem('authToken');
       // Redirect to login page
-      window.location.href = 'https://minilessonsacademy.com/react-access.php';
+      // window.location.href = 'https://minilessonsacademy.com/react-access.php';
     }
     return Promise.reject(error);
   }

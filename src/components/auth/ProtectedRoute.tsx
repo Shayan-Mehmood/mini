@@ -5,9 +5,7 @@ import apiService from '../../utilities/service/api';
 import { jwtDecode, JwtPayload } from "jwt-decode";
 // Session cache constants
 const SESSION_CACHE_KEY = 'auth_session_verified';
-// const SESSION_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
-// Define access URL as a constant to ensure consistency
-const ACCESS_REDIRECT_URL = 'https://minilessonsacademy.com/react-access.php';
+const ACCESS_REDIRECT_URL = window.location.origin+'/login';
 
 
 
@@ -66,7 +64,7 @@ const ProtectedRoute = () => {
         const response = await apiService.post('/auth/verify-access-token', {
           token
         });
-        
+        console.log(response, ' <<<');
         if (response.success) {
           // Cache the successful verification
           localStorage.setItem(
@@ -79,6 +77,7 @@ const ProtectedRoute = () => {
           
           setAuthState('authenticated');
         } else {
+          console.log('am i coming here someohow');
           // Valid response but verification failed
           handleAuthFailure();
         }

@@ -29,6 +29,8 @@ const Tabs = () => {
   const [isOpenDownloadAs, setIsOpenDownloadAs] = useState(false);
   const userId = getUserId();
 
+  console.log(userId , ' User id?');
+
   // Reset pagination when tab changes
   useEffect(() => {
     setCurrentPage(1);

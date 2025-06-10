@@ -2,16 +2,33 @@
 
 import { useState } from "react"
 import { CustomSelect } from "../../../components/ui/Select"
-import { ChevronDown, ChevronUp, Settings, Users, BookOpen } from "lucide-react"
+import { ChevronDown, ChevronUp, Settings, Users, BookOpen, Link, Quote } from "lucide-react"
 
 interface ContentDetailsStepProps {
   selectedDetails: Record<string, string>
   onChange: (detailId: string, value: string) => void
+  onToggleChange?: (toggleId: string, value: boolean) => void
+  toggles?: Record<string, boolean>
 }
 
-const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({ selectedDetails, onChange }) => {
+const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({ 
+  selectedDetails, 
+  onChange,
+  onToggleChange,
+  toggles = {} 
+}) => {
   const [activeDetail, setActiveDetail] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // Get citation toggle value with fallback
+  const includeCitations = toggles.includeCitations ?? false
+
+  // Handle toggle change
+  const handleToggleChange = (toggleId: string, value: boolean) => {
+    if (onToggleChange) {
+      onToggleChange(toggleId, value)
+    }
+  }
 
   // Split details into essential and advanced categories
   const essentialDetails: any[] = [
@@ -178,6 +195,34 @@ const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({ selectedDetails
             {essentialSelectionsCount}/{essentialDetails.length} selected
           </div>
         )}
+      </div>
+
+      {/* Citations Toggle Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-white border border-purple-100 rounded-xl p-5 transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Quote size={18} className="text-purple-500" />
+            <div>
+              <h3 className="text-sm font-medium text-gray-800">Include Citations & References</h3>
+              <p className="text-xs text-gray-500 mt-1">Add scholarly citations and references to enhance credibility</p>
+            </div>
+          </div>
+          
+          {/* Toggle Switch */}
+          <button 
+            onClick={() => handleToggleChange('includeCitations', !includeCitations)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none ${
+              includeCitations ? 'bg-purple-600' : 'bg-gray-200'
+            }`}
+          >
+            <span className="sr-only">Include Citations</span>
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
+                includeCitations ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       <div className="relative pt-6 mt-6 border-t border-gray-100">

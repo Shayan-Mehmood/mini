@@ -7,9 +7,15 @@ const Profile: React.FC = () => {
     firstName: 'Example',
     lastName: 'User',
     displayName: 'Example User',
+    email: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
+  });
+  
+  const [userInfo, setUserInfo] = useState({
+    profilePicture: '',
+    authProvider: 'email'
   });
 
   const [showPasswords, setShowPasswords] = useState({
@@ -21,6 +27,30 @@ const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  // Load user data from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setFormData(prev => ({
+          ...prev,
+          firstName: user.firstName || prev.firstName,
+          lastName: user.lastName || prev.lastName,
+          displayName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : prev.displayName,
+          email: user.email || ''
+        }));
+        
+        setUserInfo({
+          profilePicture: user.profilePicture || '',
+          authProvider: user.authProvider || 'email'
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   // Add animations with useEffect
   useEffect(() => {
@@ -235,17 +265,36 @@ const Profile: React.FC = () => {
               {/* Profile Picture Section */}
               <div className="flex flex-col items-center mb-8">
                 <div className="relative">
-                  <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {formData.firstName.charAt(0)}{formData.lastName.charAt(0)}
-                  </div>
-                  <button
-                    type="button"
-                    className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
+                  {userInfo.profilePicture ? (
+                    <img
+                      src={userInfo.profilePicture}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full border-4 border-gradient-to-r from-blue-500 to-purple-500 object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                      {formData.firstName.charAt(0)}{formData.lastName.charAt(0)}
+                    </div>
+                  )}
+                  {userInfo.authProvider !== 'google' && (
+                    <button
+                      type="button"
+                      className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Click to change profile picture</p>
+                <div className="text-center mt-2">
+                  {userInfo.authProvider === 'google' ? (
+                    <div>
+                      <p className="text-sm text-green-600 font-medium">Google Account</p>
+                      <p className="text-xs text-gray-500">Profile picture synced from Google</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Click to change profile picture</p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -313,6 +362,28 @@ const Profile: React.FC = () => {
                 )}
                 <p className="mt-2 text-sm text-gray-500">
                   This will be how your name will be displayed in the account section and in reviews
+                </p>
+              </div>
+
+              {/* Email */}
+              <div className="mt-6">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  readOnly
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                  placeholder="No email provided"
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  {userInfo.authProvider === 'google' 
+                    ? 'Email address is managed by your Google account' 
+                    : 'Contact support to change your email address'
+                  }
                 </p>
               </div>
             </div>

@@ -22,6 +22,8 @@ const SharedContent: React.FC<SharedContentProps> = () => {
       try {
         setLoading(true);
         const response = await apiService.get(`/shared/${type}/${id}`, {});
+
+        console.log(response.data.content)
         
         if (response.success && response.data) {
           // Handle different types of content formats

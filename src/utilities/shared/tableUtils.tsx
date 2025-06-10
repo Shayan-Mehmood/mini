@@ -1403,15 +1403,27 @@ export const formatSharedContent = (content: any, title: string, type: 'course' 
 // });
 
 const coverIndex = chapters.findIndex((ch: any) =>
+  // Case 1: String chapter with cover markers
   typeof ch === 'string' && (
     ch.includes('book-cover-image') || 
     ch.includes('data-cover="true"')
-  ) || (
-    typeof ch === 'object' && ch.content && (
-      ch.content.includes('book-cover-image') ||
-      ch.content.includes('data-cover="true"')
-    )
-  )
+  ) || 
+  // Case 2: Object chapter with content containing cover markers
+  (typeof ch === 'object' && ch.content && (
+    ch.content.includes('book-cover-image') ||
+    ch.content.includes('data-cover="true"')
+  )) ||
+  // Case 3: Object chapter with "Cover Image" title
+  (typeof ch === 'object' && 
+   ch.title && 
+   ch.title.toLowerCase().includes('cover') &&
+   ch.content && 
+   ch.content.includes('<img')) ||
+  // Case 4: Check first chapter with image for possible cover image
+  (typeof ch === 'object' && 
+   ch.content && 
+   ch.content.includes('<img') && 
+   chapters.indexOf(ch) === 0)
 );
 
 let coverHtml = '';
@@ -1430,6 +1442,8 @@ if (coverIndex >= 0) {
   
   // If not found, look for images inside Quill p tags
   if (!coverImage) {
+
+    console.log("inside if when normal cover not found")
     // Try various Quill selectors
     const selectors = [
       'p.ql-align-center img', // Centered images

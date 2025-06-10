@@ -6,11 +6,11 @@ import CallUsButton from '../components/ui/CallUsButton';
 const PublicLayout = () => {
   return (
     <>
-      <Navbar />
+      {/* <Navbar /> */}
       <main>
         <Outlet />
       </main>
-      <Footer />
+      {/* <Footer /> */}
       
       {/* Call Us Button - appears on all public pages */}
       <CallUsButton />
