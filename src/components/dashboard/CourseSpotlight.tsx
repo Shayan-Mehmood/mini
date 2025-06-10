@@ -282,10 +282,10 @@ const CourseSpotlight: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8 lg:mb-16">
           <h2 className="text-4xl lg:text-6xl font-bold text-gray-800 mb-4">
-            Course Spotlight
+            Content Spotlight
           </h2>
           <p className="text-xl lg:text-2xl text-gray-600">
-            This Months Spotlighted Courses
+            This Months Spotlighted Content
           </p>
         </div>
 
@@ -360,7 +360,7 @@ const CourseSpotlight: React.FC = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="text-center mt-12 lg:mt-16">
+        {/* <div className="text-center mt-12 lg:mt-16">
           <div className="flex items-center justify-center mb-4">
             <img
               src="https://minilessonsacademy.com/wp-content/uploads/2024/10/14-WInner.png"
@@ -371,7 +371,7 @@ const CourseSpotlight: React.FC = () => {
               🏆 Join us in celebrating these creators!
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Add required CSS for animations */}
