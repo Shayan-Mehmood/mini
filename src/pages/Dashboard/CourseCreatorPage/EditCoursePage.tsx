@@ -1521,16 +1521,7 @@ const EditCoursePage = () => {
   {/* In your main content area, where the RichTextEditor is rendered */}
   {isCurrentChapterCover() ? (
     <div className="flex-1">
-      {/* <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-        <h3 className="text-lg font-semibold text-purple-800 mb-2 flex items-center">
-          <Image className="w-5 h-5 mr-2" />
-          Cover Image Editor
-        </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Edit your cover image directly. Changes will be saved automatically.
-        </p>
-      </div>
-       */}
+      
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <ImageEditor
           initialImageUrl={extractCoverImageUrl(selectedChapter)}
