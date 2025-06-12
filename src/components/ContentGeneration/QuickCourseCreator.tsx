@@ -29,12 +29,12 @@ const QuickCourseCreator = () => {
     },
     {
       id: "prompt",
-      name: "Enter Prompt",
-      description: "Describe what you want in your content",
+      name: "Course Idea",
+      description: "Tell us your course idea",
     },
     {
       id: "summary",
-      name: "Review Summary",
+      name: "Review and refine your course summary",
       description: "Review auto-generated summary",
     },
     {
@@ -114,7 +114,7 @@ const QuickCourseCreator = () => {
         </div>
 
         {/* Timeline */}
-        <div className="mb-8 px-2">
+        <div className="mb-8 px-2 pt-8">
           <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 flex justify-center">
             {renderTopStepsTimeline(steps, currentStep)}
           </div>
@@ -127,6 +127,7 @@ const QuickCourseCreator = () => {
 };
 
 export default QuickCourseCreator;
+
 
 // First step: Content Type selection
 const ContentTypeCard = ({ setCurrentStep }: { setCurrentStep: (step: number) => void }) => {
@@ -230,7 +231,7 @@ const ContentTypeCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
                             <div className={`w-1.5 h-1.5 rounded-full ${
                               isActive ? 'bg-blue-500' : 'bg-gray-400'
                             }`}></div>
-                            <span className="text-xs text-gray-700">{benefit}</span>
+                            <span className="text-base text-gray-700">{benefit}</span>
                           </div>
                         ))}
                       </div>
@@ -254,25 +255,24 @@ const ContentTypeCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
       <div className="mb-8">
         <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8">
           <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Ready to Get Started?</h3>
             <p className="text-gray-600 mb-6">
               You've selected to create a <span className="font-semibold text-blue-600">{isSelected}</span>. 
-              Click continue to enter your prompt and begin the creation process.
+              Click continue to enter your course idea and begin the creation process.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 border border-gray-300 hover:border-gray-400 font-medium transition-all duration-200 rounded-lg flex items-center gap-2"
               >
                 ← Back to dashboard
               </button>
               
               <button
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                className="px-8 py-4 text-purple-600 hover:text-purple-700 border-2 border-purple-600 hover:border-purple-700 font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 hover:scale-[1.02]"
                 onClick={() => changingStep(1)}
               >
-                Continue to Enter Prompt
+                Continue
                 <ArrowRight className="w-5 h-5" />
               </button>
             </div>
@@ -369,8 +369,8 @@ const PromptInputCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
   return (
     <>
       {/* Header Section */}
-      <div className="text-center mb-12">
-        <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8">
+      <div className="text-center mb-2">
+        <div className=" p-6 lg:px-8 ">
           <div className="flex items-center justify-center gap-2 mb-4">
             <span className="text-3xl">✏️</span>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
@@ -398,7 +398,7 @@ const PromptInputCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
       
       {/* Prompt Input Section */}
       <div className="mb-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8">
+        <div className="">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Enter Your Prompt</h2>
           
           <div className="max-w-2xl mx-auto">
@@ -432,8 +432,8 @@ const PromptInputCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
                   disabled={!quickPrompt || isSubmitting}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 ${
                     !quickPrompt || isSubmitting
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                      ? "text-gray-400 border border-gray-200 cursor-not-allowed"
+                      : "text-purple-600 hover:text-purple-700 border-2 border-purple-600 hover:border-purple-700 hover:scale-[1.02]"
                   }`}
                 >
                   {isSubmitting ? (
@@ -457,11 +457,11 @@ const PromptInputCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
 
       {/* Navigation */}
       <div className="mb-8">
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className=" p-6">
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
               onClick={() => setCurrentStep(0)}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors flex items-center gap-2"
+              className="px-6 py-3 text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-400 font-medium transition-all duration-200 rounded-lg flex items-center gap-2"
             >
               <ArrowRight className="w-4 h-4 rotate-180" />
               Back to Content Type
@@ -469,7 +469,7 @@ const PromptInputCard = ({ setCurrentStep }: { setCurrentStep: (step: number) =>
             
             <button
               onClick={() => navigate('/dashboard')}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              className="px-6 py-3 text-red-600 hover:text-red-700 border border-red-300 hover:border-red-400 font-medium transition-all duration-200 rounded-lg"
             >
               Cancel & Return to Dashboard
             </button>
@@ -510,7 +510,7 @@ const SummaryReviewCard = ({ setCurrentStep }: { setCurrentStep: (step: number) 
   
   // Get content info from localStorage
   const contentType = localStorage.getItem(LOCAL_STORAGE_KEYS.CONTENT_TYPE) || "course";
-  const prompt = localStorage.getItem(LOCAL_STORAGE_KEYS.PROMPT) || "";
+  const courseIdea = localStorage.getItem(LOCAL_STORAGE_KEYS.PROMPT) || "";
   
   // Load the generated summary when component mounts
   useEffect(() => {
@@ -541,7 +541,7 @@ const SummaryReviewCard = ({ setCurrentStep }: { setCurrentStep: (step: number) 
             </h1>
           </div>
           <p className="text-gray-600 max-w-3xl mx-auto">
-            Check and edit the summary for your {contentType}
+            Review the outline of your course - you can make changes before final generation
           </p>
         </div>
       </div>
@@ -550,10 +550,10 @@ const SummaryReviewCard = ({ setCurrentStep }: { setCurrentStep: (step: number) 
       <div className="mb-8">
         <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
-            {/* Original prompt reminder */}
+            {/* Original course idea reminder */}
             <div className="mb-6 p-4 border border-gray-200 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Your prompt:</h3>
-              <p className="text-sm text-gray-600 italic">{prompt}</p>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Your course idea:</h3>
+              <p className="text-sm text-gray-600 italic">{courseIdea}</p>
             </div>
             
           
@@ -580,18 +580,18 @@ const SummaryReviewCard = ({ setCurrentStep }: { setCurrentStep: (step: number) 
       {/* Navigation */}
       <div className="mb-8">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
             <button
               onClick={() => setCurrentStep(1)}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium transition-colors flex items-center gap-2"
+              className="px-6 py-3 text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-400 font-medium transition-all duration-200 rounded-lg flex items-center gap-2"
             >
               <ArrowRight className="w-4 h-4 rotate-180" />
-              Back to Prompt
+              Back to Course Idea
             </button>
             
             <button
               onClick={handleContinue}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+              className="px-8 py-4 text-purple-600 hover:text-purple-700 border-2 border-purple-600 hover:border-purple-700 font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 hover:scale-[1.02]"
             >
               Generate Content
               <ArrowRight className="w-5 h-5" />
@@ -604,12 +604,13 @@ const SummaryReviewCard = ({ setCurrentStep }: { setCurrentStep: (step: number) 
 };
 
 // Fourth step: Finalize Content - Now using ContentGenerationViewer
+// Fourth step: Finalize Content - Now using ContentGenerationViewer
 const FinalizeContentCard = ({ setCurrentStep }: { setCurrentStep: (step: number) => void }) => {
   const navigate = useNavigate();
   
   // Get stored data
   const contentType = localStorage.getItem(LOCAL_STORAGE_KEYS.CONTENT_TYPE) || "course";
-  const prompt = localStorage.getItem(LOCAL_STORAGE_KEYS.PROMPT) || "";
+  const courseIdea = localStorage.getItem(LOCAL_STORAGE_KEYS.PROMPT) || "";
   const summary = localStorage.getItem(LOCAL_STORAGE_KEYS.SUMMARY) || "";
   const title = localStorage.getItem(LOCAL_STORAGE_KEYS.TITLE) || "Your Content";
   

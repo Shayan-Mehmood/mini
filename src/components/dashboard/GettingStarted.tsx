@@ -52,7 +52,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({
 
   return (
     <section
-      className="w-full rounded-xl overflow-hidden shadow-lg relative"
+      className="w-full md:rounded-xl overflow-hidden shadow-lg relative"
       style={{
         background: "linear-gradient(to bottom right, #7b1fa2, #e53935)",
       }}

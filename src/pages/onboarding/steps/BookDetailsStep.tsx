@@ -190,21 +190,23 @@ const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {essentialDetails.map(renderDetailCard)}
         </div>
-        {essentialSelectionsCount > 0 && (
+        {/* {essentialSelectionsCount > 0 && (
           <div className="mt-2 text-sm text-right text-purple-600 font-medium">
             {essentialSelectionsCount}/{essentialDetails.length} selected
           </div>
-        )}
+        )} */}
       </div>
 
-      {/* Citations Toggle Section */}
+      {/* Citations Toggle Section - Updated wording and positioning */}
       <div className="bg-gradient-to-r from-purple-50 to-white border border-purple-100 rounded-xl p-5 transition-all duration-300">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Quote size={18} className="text-purple-500" />
             <div>
               <h3 className="text-sm font-medium text-gray-800">Include Citations & References</h3>
-              <p className="text-xs text-gray-500 mt-1">Add scholarly citations and references to enhance credibility</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Include scholarly citations and references to boost your course's credibility.
+              </p>
             </div>
           </div>
           
@@ -223,6 +225,15 @@ const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({
             />
           </button>
         </div>
+        
+        {/* Disclaimer about AI-generated citations */}
+        {includeCitations && (
+          <div className="mt-3 bg-white/50 rounded-lg p-2.5 border border-gray-100">
+            <p className="text-xs text-gray-500 italic">
+              <span className="font-medium text-purple-600">Note:</span> Citations provided are AI-generated; please verify accuracy and completeness before publishing.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="relative pt-6 mt-6 border-t border-gray-100">
@@ -257,11 +268,11 @@ const ContentDetailsStep: React.FC<ContentDetailsStepProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {advancedDetails.map(renderDetailCard)}
             </div>
-            {advancedSelectionsCount > 0 && (
+            {/* {advancedSelectionsCount > 0 && (
               <div className="mt-2 text-sm text-right text-purple-600 font-medium">
                 {advancedSelectionsCount}/{advancedDetails.length} selected
               </div>
-            )}
+            )} */}
           </div>
         )}
       </div>

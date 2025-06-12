@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import EditorStyles from './EditorStyles';
 import EditorToolbar from './EditorToolbar';
 import BlotFormatter2 from '@enzedonline/quill-blot-formatter2';
-import { Save, Edit, Image, ChevronRight, FileText, PanelLeftOpen, Lightbulb, Loader2 } from 'lucide-react';
+import { Save, Edit, Image, ChevronRight, FileText, PanelLeftOpen, Lightbulb, Loader2, RefreshCw, PlusCircle, Wand2 } from 'lucide-react';
 import '../index.css';
 
 // Register the BlotFormatter2 module with Quill
@@ -25,7 +25,11 @@ interface RichTextEditorProps {
   onContentChange: (content: string) => void;
   onSave: () => void;
   onImageClick?: (imageUrl: string) => void;
-  onEnhanceText?: (selectedText: string, fullContent: string) => Promise<string>;
+  onEnhanceText?: (
+    selectedText: string, 
+    fullContent: string, 
+    operation?: 'enhance' | 'rewrite' | 'addParagraph'
+  ) => Promise<string>;
 }
 
 // Improved cleanHtmlContent function that preserves image attributes during resize
@@ -73,6 +77,10 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
     // New state for text enhancement feature
     const [selectedText, setSelectedText] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
+    const [isAIMenuOpen, setIsAIMenuOpen] = useState<boolean>(false);
+    const popoverRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [selectionRange, setSelectionRange] = useState<{index: number, length: number} | null>(null);
 
     useEffect(() => {
       if (initialContent) {
@@ -106,11 +114,13 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           const text = editor.getText(selection.index, selection.length);
           if (text.trim().length > 0) {
             setSelectedText(text);
+            setSelectionRange(selection);
             return;
           }
         }
         
         setSelectedText('');
+        setSelectionRange(null);
       };
       
       document.addEventListener('selectionchange', checkSelection);
@@ -121,6 +131,24 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
         document.removeEventListener('mouseup', checkSelection);
       };
     }, [ref]);
+
+    // Add a useEffect to handle clicks outside the popover
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (isAIMenuOpen && 
+            popoverRef.current && 
+            buttonRef.current && 
+            !popoverRef.current.contains(event.target as Node) &&
+            !buttonRef.current.contains(event.target as Node)) {
+          setIsAIMenuOpen(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [isAIMenuOpen]);
 
     // Enhanced resize tracking - existing code...
     useEffect(() => {
@@ -221,41 +249,51 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
       onContentChange(cleanedContent);
     };
 
-    // Function to handle text enhancement with AI
-    const handleEnhanceText = async () => {
-      if (!onEnhanceText || !selectedText || isEnhancing) return;
-      
-      try {
-        setIsEnhancing(true);
-        
-        // Get the current editor and selection
-        if (!ref || !('current' in ref) || !ref.current) return;
-        const editor = ref.current.getEditor();
-        const selection = editor.getSelection();
-        
-        if (!selection) return;
-        
-        // Call the enhance text function passed from parent
-        const enhancedText = await onEnhanceText(selectedText, content);
-        
-        // Replace the selected text with the enhanced text
-        editor.deleteText(selection.index, selection.length);
-        editor.insertText(selection.index, enhancedText);
-        
-        // Update the content state
-        const updatedContent = editor.root.innerHTML;
-        setContent(updatedContent);
-        onContentChange(updatedContent);
-        
-        // Clear selection
-        setSelectedText('');
-        
-      } catch (error) {
-        console.error('Error enhancing text:', error);
-      } finally {
-        setIsEnhancing(false);
-      }
-    };
+  
+
+    // Create a new function to handle different text operations
+    const handleProcessText = async (operation: 'enhance' | 'rewrite' | 'addParagraph') => {
+  if (!onEnhanceText || !selectedText || isEnhancing || !selectionRange) return;
+  
+  setIsAIMenuOpen(false);
+  
+  try {
+    setIsEnhancing(true);
+    
+    // Get the current editor
+    if (!ref || !('current' in ref) || !ref.current) return;
+    const editor = ref.current.getEditor();
+    
+    // Call the enhance text function passed from parent, now passing the operation type
+    // We use a custom property to pass the operation to the backend
+    const processedText = await onEnhanceText(selectedText, content, operation);
+    
+    // Handle text differently based on operation
+    if (operation === 'addParagraph') {
+      // For add paragraph, insert after the selected text
+      const insertIndex = selectionRange.index + selectionRange.length;
+      editor.insertText(insertIndex, "\n\n" + processedText);
+    } else {
+      // For enhance/rewrite, replace the selected text
+      editor.deleteText(selectionRange.index, selectionRange.length);
+      editor.insertText(selectionRange.index, processedText);
+    }
+    
+    // Update the content state
+    const updatedContent = editor.root.innerHTML;
+    setContent(updatedContent);
+    onContentChange(updatedContent);
+    
+    // Clear selection
+    setSelectedText('');
+    setSelectionRange(null);
+    
+  } catch (error) {
+    console.error(`Error processing text (${operation}):`, error);
+  } finally {
+    setIsEnhancing(false);
+  }
+};
 
     // Enhanced modules configuration - existing code...
     const modules = {
@@ -409,24 +447,84 @@ const RichTextEditor = forwardRef<ReactQuill, RichTextEditorProps>(
           
           {/* AI Text Enhancement Button */}
           {selectedText && onEnhanceText && (
-            <div className=" fixed bottom-4 right-4 z-10">
-              <Button
-                onClick={handleEnhanceText}
-                disabled={isEnhancing}
-                className="bg-yellow-500 hover:bg-yellow-600  text-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center"
-                title="Enhance selected text with AI"
-              >
-                {isEnhancing ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Lightbulb className="h-5 w-5" />
-                    <span className='text-[12px]'>Enhance Text</span>
-                  </>
-                )}
-              </Button>
+  <div className="fixed bottom-4 right-4 z-10">
+    <div className="relative">
+      <Button
+        onClick={() => setIsAIMenuOpen(!isAIMenuOpen)}
+        disabled={isEnhancing}
+         className={`flex items-center justify-center rounded-full w-12 h-12 shadow-lg transition-all duration-200
+          ${isEnhancing 
+            ? 'bg-purple-500 cursor-not-allowed' 
+            : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:shadow-xl'}`}
+        title="AI Text Tools"
+      >
+        {isEnhancing ? (
+          <Loader2 className="h-5 w-5 text-white animate-spin" />
+        ) : (
+          <Wand2 className="h-5 w-5 text-white" />
+        )}
+        
+      </Button>
+      
+      {/* AI Tools Popover */}
+      {isAIMenuOpen && !isEnhancing && (
+        <div 
+          ref={popoverRef}
+          className="absolute bottom-12 right-0 w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-in fade-in"
+        >
+          <div className="flex flex-col">
+            <div className="bg-gradient-to-r from-purple-500 to-purple-400 text-white font-medium py-2 px-3">
+              AI Text Tools
             </div>
-          )}
+            
+            <div className="text-xs text-gray-500 px-3 py-2 border-b">
+              Select an action for the highlighted text:
+            </div>
+            
+            <button
+              className="flex items-center px-3 py-3 hover:bg-gray-50 transition-colors duration-150 border-b w-full text-left"
+              onClick={() => handleProcessText('enhance')}
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 mr-3">
+                <Lightbulb className="h-4 w-4 text-yellow-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-sm">Enhance</div>
+                <div className="text-xs text-gray-500">Improve clarity and style</div>
+              </div>
+            </button>
+            
+            <button
+              className="flex items-center px-3 py-3 hover:bg-gray-50 transition-colors duration-150 border-b w-full text-left"
+              onClick={() => handleProcessText('rewrite')}
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 mr-3">
+                <RefreshCw className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-sm">Rewrite</div>
+                <div className="text-xs text-gray-500">Completely rewrite text</div>
+              </div>
+            </button>
+            
+            <button
+              className="flex items-center px-3 py-3 hover:bg-gray-50 transition-colors duration-150 w-full text-left"
+              onClick={() => handleProcessText('addParagraph')}
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 mr-3">
+                <PlusCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-sm">Add Paragraph</div>
+                <div className="text-xs text-gray-500">Expand with new content</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
         </div>
       </div>
     );

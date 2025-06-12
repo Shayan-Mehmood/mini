@@ -1589,9 +1589,8 @@ if (coverIndex >= 0) {
 
 .cover-image {
   max-width: 100%;
-  height: 500px;
-  width: auto;
-  // object-fit: contain;
+  height: auto;
+  object-fit: contain;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   border-radius: 8px;
 }

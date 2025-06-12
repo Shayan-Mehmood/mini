@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, ZoomIn, ZoomOut, RotateCw, RotateCcw, Crop, Move, Check, Type, Lock, Unlock } from 'lucide-react';
+import { Save, ZoomIn, ZoomOut, RotateCw, RotateCcw, Crop, Move, Check, Type, Lock, Unlock, Palette } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Canvas, Image as FabricImage } from 'fabric';
 import * as fabric from 'fabric';
+import ColorPicker from '../ui/ImageEditor/components/ColorPicker'; // Import the ColorPicker component
+
 
 interface CoverImageEditorProps {
   imageUrl: string;
@@ -25,6 +27,9 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
   const [showDimensionInputs, setShowDimensionInputs] = useState<boolean>(false);
   const [maintainAspectRatio, setMaintainAspectRatio] = useState<boolean>(true);
   const [originalAspectRatio, setOriginalAspectRatio] = useState<number>(1);
+  const [textColor, setTextColor] = useState('#000000');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showTextOptions, setShowTextOptions] = useState(false);
   
   // Check for mobile device
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -39,6 +44,35 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
     // Cleanup on unmount
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Add this useEffect to show text options when a text object is selected
+useEffect(() => {
+  if (!canvas) return;
+  
+  const handleSelectionCreated = (e: any) => {
+    const selectedObject = e.selected?.[0];
+    if (selectedObject && (selectedObject.type === 'i-text' || selectedObject.type === 'text')) {
+      setTextColor(selectedObject.fill);
+      setShowTextOptions(true);
+    } else {
+      setShowTextOptions(false);
+    }
+  };
+  
+  const handleSelectionCleared = () => {
+    setShowTextOptions(false);
+  };
+  
+  canvas.on('selection:created', handleSelectionCreated);
+  canvas.on('selection:updated', handleSelectionCreated);
+  canvas.on('selection:cleared', handleSelectionCleared);
+  
+  return () => {
+    canvas.off('selection:created', handleSelectionCreated);
+    canvas.off('selection:updated', handleSelectionCreated);
+    canvas.off('selection:cleared', handleSelectionCleared);
+  };
+}, [canvas]);
 
   // Initialize canvas
   useEffect(() => {
@@ -146,6 +180,22 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
       fabricCanvas.dispose();
     };
   }, [imageUrl, isMobile]);
+
+  // Add this method to your component
+const handleColorChange = (newColor: string): void => {
+  // Update the state
+  setTextColor(newColor);
+
+  const canvas = canvasInstanceRef.current;
+  if (!canvas) return;
+
+  // Apply color to currently selected text object
+  const activeObject = canvas.getActiveObject();
+  if (activeObject && (activeObject.type === 'i-text' || activeObject.type === 'text')) {
+    activeObject.set('fill', newColor);
+    canvas.renderAll();
+  }
+};
 
   // Handle dimensions change for the selected object
   const handleDimensionChange = () => {
@@ -279,38 +329,40 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
     
     canvas.renderAll();
   };
-
-  const handleAddText = (): void => {
-    const canvas = canvasInstanceRef.current as fabric.Canvas | null;
-    if (!canvas) return;
-    
-    // Position text in the center of the canvas
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    
-    const text = new fabric.IText('Double click to edit', {
-      left: canvasWidth / 2,
-      top: canvasHeight / 2,
-      fontFamily: 'Arial',
-      fontSize: 30,
-      fill: '#000',
-      textAlign: 'center',
-      originX: 'center',
-      originY: 'center',
-      stroke: '#000000',
-      strokeWidth: 0.5,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0,0,0,0.6)',
-        blur: 3,
-        offsetX: 1,
-        offsetY: 1
-      })
-    });
-    
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    canvas.renderAll();
-  };
+const handleAddText = (): void => {
+  const canvas = canvasInstanceRef.current as fabric.Canvas | null;
+  if (!canvas) return;
+  
+  // Position text in the center of the canvas
+  const canvasWidth = canvas.getWidth();
+  const canvasHeight = canvas.getHeight();
+  
+  const text = new fabric.IText('Double click to edit', {
+    left: canvasWidth / 2,
+    top: canvasHeight / 2,
+    fontFamily: 'Arial',
+    fontSize: 30,
+    fill: textColor, // Use the textColor state
+    textAlign: 'center',
+    originX: 'center',
+    originY: 'center',
+    stroke: '#000000',
+    strokeWidth: 0.5,
+    shadow: new fabric.Shadow({
+      color: 'rgba(0,0,0,0.6)',
+      blur: 3,
+      offsetX: 1,
+      offsetY: 1
+    })
+  });
+  
+  canvas.add(text);
+  canvas.setActiveObject(text);
+  canvas.renderAll();
+  
+  // Show text options when adding text
+  setShowTextOptions(true);
+};
 
   const handleSave = () => {
     if (!canvas) {
@@ -463,6 +515,16 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
         >
           <Crop size={16} />
         </Button>
+        {/* Add this to your toolbar buttons */}
+<Button 
+  onClick={() => setShowTextOptions(!showTextOptions)} 
+  className={`flex items-center gap-1 ${showTextOptions ? 'bg-purple-100 hover:bg-purple-200 text-purple-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+  disabled={isLoading}
+  title="Text Options"
+>
+  <Palette size={16} />
+  <span>Text Options</span>
+</Button>
       </div>
     ) : (
       // Desktop toolbar (with text labels)
@@ -580,6 +642,29 @@ const CoverImageEditor: React.FC<CoverImageEditorProps> = ({ imageUrl, onSave })
           </div>
         </div>
       )}
+
+      {/* Add this after your dimension inputs section */}
+{showTextOptions && (
+  <div className="flex mb-4 items-center justify-center bg-gray-50 p-2 rounded-md border border-gray-200">
+      <Button 
+        onClick={() => setShowTextOptions(false)}
+        className="h-7 w-7 p-0 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300"
+        size="sm"
+      >
+        <span className="text-gray-600 text-sm font-medium">×</span>
+      </Button>
+      
+      <div className="flex-1 mx-2 max-w-[300px]">
+        <ColorPicker
+          color={textColor}
+          setColor={handleColorChange}
+          showColorPicker={showColorPicker}
+          setShowColorPicker={setShowColorPicker}
+          label=""
+        />
+      </div>
+    </div>
+)}
 
       {/* Canvas container */}
 <div 

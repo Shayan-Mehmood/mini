@@ -18,9 +18,9 @@ const CreationOptions: React.FC<CreationOptionsProps> = ({ onMethodSelect }) => 
   const navigate = useNavigate();
 
   return (
-    <div className="px-4 min-h-screen py-8 sm:px-6 md:px-10 lg:px-12 max-w-6xl mx-auto">
+    <div className="px-4 min-h-screen py-12 sm:px-6 md:px-10 lg:px-12 max-w-6xl mx-auto">
       {/* Back to Dashboard Button */}
-      <div className="absolute top-4 left-4 md:top-6 md:left-6">
+      <div className="absolute top-4 left-4 md:top-6 md:left-6 hidden">
         <BackButton 
           onBeforeNavigate={() => {
             // Optionally handle any pre-navigation logic here
@@ -37,8 +37,8 @@ const CreationOptions: React.FC<CreationOptionsProps> = ({ onMethodSelect }) => 
       </div>
       
       <div className="mb-10 text-center pt-10">
-        <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-3">
-          Content Creation
+        <div className=" hidden px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-3">
+          Create Now!
         </div>
         <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3">
           Create New Content
@@ -74,11 +74,11 @@ const CreationOptions: React.FC<CreationOptionsProps> = ({ onMethodSelect }) => 
             subtitle: "Use Existing Document",
             description:
               "Convert your existing document into an interactive course. Upload PDF or DOCX files.",
-            colorFrom: "from-blue-500",
-            colorTo: "to-indigo-600",
+            colorFrom: "from-purple-500",
+            colorTo: "to-purple-700",
             icon: <Upload className="h-5 w-5" />,
             buttonText: "Upload Document",
-            buttonColor: "bg-blue-500 hover:bg-blue-600",
+            buttonColor: "bg-purple-500 hover:bg-purple-600",
             features: [
               "Turn existing materials into courses",
               "Automatic content extraction",
@@ -92,11 +92,11 @@ const CreationOptions: React.FC<CreationOptionsProps> = ({ onMethodSelect }) => 
             subtitle: "One-Click Course",
             description:
               "Generate a complete course instantly with just a prompt. Perfect when you need content quickly.",
-            colorFrom: "from-amber-500",
-            colorTo: "to-orange-500",
+            colorFrom: "from-purple-500",
+            colorTo: "to-purple-700",
             icon: <Zap className="h-5 w-5" />,
             buttonText: "Create Instantly",
-            buttonColor: "bg-amber-500 hover:bg-amber-600",
+            buttonColor: "bg-purple-500 hover:bg-purple-600",
             features: [
               "Fastest content creation option",
               "AI-generated structure and content",
@@ -170,9 +170,7 @@ const CreationOptions: React.FC<CreationOptionsProps> = ({ onMethodSelect }) => 
           )
         )}
       </div>
-      
-      {/* Help section */}
-    
+          
       {/* Add a custom animation style */}
       <style >{`
         @keyframes fadeUp {

@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
   export const renderTopStepsTimeline = (steps:any,currentStep:any) => {
     return (
       <>
-       <div className="scrollbar-hide hidden sm:flex flex-nowrap items-start justify-start overflow-x-auto gap-4">
+       <div className="scrollbar-hide hidden sm:flex flex-nowrap items-start justify-start overflow-x-auto gap-4 ">
           {steps.map((step:any, index:number) => (
             <div
               key={step.id}
@@ -64,10 +64,10 @@ import { Check } from "lucide-react";
             </div>
             <div className="ml-2">
               <p className="text-xs font-medium text-gray-900">
-                {steps[currentStep].name}
+                {steps[currentStep]?.name}
               </p>
               <p className="text-[10px] text-gray-500 max-w-[100px] truncate">
-                {steps[currentStep].description}
+                {steps[currentStep]?.description}
               </p>
             </div>
           </div>

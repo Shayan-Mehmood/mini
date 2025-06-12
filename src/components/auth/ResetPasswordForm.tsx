@@ -1,56 +1,124 @@
-
-import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router";
+import React, { useState, useEffect } from "react";
+import { NavLink, useNavigate, useLocation } from "react-router";
 import apiService from "../../utilities/service/api";
 import { toast } from "react-hot-toast";
+import { Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 const ResetPasswordForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isVerified, setIsVerified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+  
   const [formData, setFormData] = useState({
-    email: "",
-    newPassword: "",
+    password: "",
     confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({
-    email: "",
-    newPassword: "",
+    password: "",
     confirmPassword: "",
   });
 
-  const [message, setMessage] = useState("");
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    password: false,
+    confirmPassword: false,
+  });
 
-  const [passwordType, setPasswordType] = useState<"password" | "text">("password");
+  // Extract token and email from URL on component mount
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const urlToken = queryParams.get("token");
+    const urlEmail = queryParams.get("email");
+
+    if (!urlToken || !urlEmail) {
+      setVerificationError("Invalid reset link. The link might be expired or malformed.");
+      setIsVerifying(false);
+      return;
+    }
+
+    setToken(urlToken);
+    setEmail(urlEmail);
+    
+    // Verify the token
+    verifyToken(urlEmail, urlToken);
+  }, [location.search]);
+
+  // Function to verify token with the backend
+  const verifyToken = async (email: string, token: string) => {
+    try {
+      const response = await apiService.post("/auth/password/verify-token", {
+        email,
+        token,
+      });
+
+      if (response.success) {
+        setIsVerified(true);
+      } else {
+        setVerificationError(response.message || "Invalid or expired token. Please request a new password reset.");
+      }
+    } catch (err: any) {
+      const errorMessage = 
+        err.response?.data?.message || 
+        err.message || 
+        "Token verification failed. Please request a new password reset.";
+      
+      setVerificationError(errorMessage);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
 
-    // Clear error when typing
-    setErrors({ ...errors, [e.target.name]: "" });
+    // Clear specific field error
+    setErrors(prev => ({
+      ...prev,
+      [name]: ""
+    }));
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
+    setPasswordVisibility(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   // Validate form
   const validateForm = () => {
     let isValid = true;
-    let newErrors = { email: "", newPassword: "", confirmPassword: "" };
-
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Your email is invalid.";
+    const newErrors = { password: "", confirmPassword: "" };
+    
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+      isValid = false;
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Password must contain uppercase, lowercase letters, and numbers";
       isValid = false;
     }
-
-    if (formData.newPassword.length < 8) {
-      newErrors.newPassword = "Password must be at least 8 characters.";
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
       isValid = false;
     }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match.";
-      isValid = false;
-    }
-
+    
     setErrors(newErrors);
     return isValid;
   };
@@ -62,150 +130,243 @@ const ResetPasswordForm: React.FC = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    setMessage("");
-    setErrors({ email: "", newPassword: "", confirmPassword: "" });
 
     try {
-      const response: any = await apiService.post("auth/reset-password", {
-        email: formData.email,
-        password: formData.newPassword,
-      },{});
-      
+      const response = await apiService.post("/auth/password/reset-with-token", {
+        email,
+        token,
+        password: formData.password,
+      });
+
       if (response.success) {
-        toast.success(response.message || "Password reset successfully!");
-        setMessage("Password reset successfully! Redirecting to login...");
+        toast.success("Password reset successfully!");
+        setResetSuccess(true);
+        
+        // Redirect to login after 2 seconds
         setTimeout(() => {
-          navigate("/login");
+          navigate("/login", { 
+            state: { 
+              notification: "Password reset successful! You can now log in with your new password."
+            }
+          });
         }, 2000);
       } else {
         toast.error(response.message || "Failed to reset password");
-        setMessage(response.message || "Failed to reset password");
       }
-    } catch (error: any) {
-      console.error("Error during password reset:", error);
-      
+    } catch (err: any) {
       let errorMessage = "An unexpected error occurred. Please try again.";
       
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
       }
       
       toast.error(errorMessage);
-      setMessage(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const togglePasswordType = () => {
-    setPasswordType((prev) => (prev === "password" ? "text" : "password"));
-  };
+  // Show loading state while verifying token
+  if (isVerifying) {
+    return (
+      <div className="w-full px-8 md:w-1/2 mx-auto my-8">
+        <div className="flex justify-center">
+          <NavLink to="/">
+            <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
+          </NavLink>
+        </div>
+        <div className="mt-8 text-center">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto text-blue-600 mb-4" />
+          <h2 className="text-xl font-medium text-gray-800 mb-2">Verifying Your Reset Link</h2>
+          <p className="text-gray-600">Please wait while we verify your reset token...</p>
+        </div>
+      </div>
+    );
+  }
 
+  // Show error state if token verification failed
+  if (!isVerified && verificationError) {
+    return (
+      <div className="w-full px-8 md:w-1/2 mx-auto my-8">
+        <div className="flex justify-center">
+          <NavLink to="/">
+            <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
+          </NavLink>
+        </div>
+        <div className="mt-8">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-xl font-medium text-gray-800 text-center">Reset Link Invalid</h2>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-gray-600 mb-6">{verificationError}</p>
+            
+            <NavLink
+              to="/forgot-password"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Request New Reset Link
+            </NavLink>
+            
+            <div className="mt-4">
+              <NavLink
+                to="/login"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Back to Login
+              </NavLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Success message after password reset
+  if (resetSuccess) {
+    return (
+      <div className="w-full px-8 md:w-1/2 mx-auto my-8">
+        <div className="flex justify-center">
+          <NavLink to="/">
+            <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
+          </NavLink>
+        </div>
+        <div className="mt-8">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-10 h-10 text-green-500" />
+            </div>
+            <h2 className="text-xl font-medium text-gray-800 text-center">Password Reset Successful</h2>
+          </div>
+          
+          <p className="text-center text-gray-600 mb-6">
+            Your password has been reset successfully. You will be redirected to the login page shortly.
+          </p>
+          
+          <div className="text-center">
+            <NavLink
+              to="/login"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Go to Login
+            </NavLink>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Password reset form (shown if token is valid)
   return (
-    <div className="w-full px-8 md:w-1/2 mx-auto my-4">
+    <div className="w-full px-8 md:w-1/2 mx-auto my-8">
       <div className="flex justify-center">
         <NavLink to="/">
           <img src="/images/logo_minilessons.png" height="30" width="147" alt="logo" />
         </NavLink>
       </div>
       <h2 className="mt-6 text-2xl font-bold text-gray-900 text-center">Reset Your Password</h2>
-      <p className="text-base text-gray-600 mt-2 text-center">Enter your email and a new password.</p>
+      <p className="text-base text-gray-600 mt-2 text-center">
+        Create a new password for your account
+      </p>
 
-      {message && (
-        <div className={`mt-4 p-3 rounded-md text-center ${
-          message.includes('successfully') 
-            ? 'bg-green-100 text-green-700 border border-green-300' 
-            : 'bg-red-100 text-red-700 border border-red-300'
-        }`}>
-          {message}
+      <form onSubmit={handleSubmit} className="mt-8">
+        {/* Email display (non-editable) */}
+        <div className="mb-5">
+          <label className="block font-medium text-gray-600 mb-2">
+            Email Address
+          </label>
+          <div className="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+            {email}
+          </div>
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="mt-5">
-        <div className="space-y-4">
-          {/* Email Field */}
-          <div>
-            <label htmlFor="email" className="font-medium text-gray-600">Email</label>
+        {/* New Password Field */}
+        <div className="mb-5">
+          <label htmlFor="password" className="block font-medium text-gray-600 mb-2">
+            New Password
+          </label>
+          <div className="relative">
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type={passwordVisibility.password ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
               onChange={handleChange}
-              placeholder="Enter your email address"
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                errors.email 
+              placeholder="Enter new password"
+              className={`w-full p-3 border rounded-lg pr-12 focus:outline-none focus:ring-2 transition-colors ${
+                errors.password 
                   ? "border-red-500 focus:ring-red-200" 
                   : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
               }`}
             />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+            <button
+              type="button"
+              className="absolute top-1/2 right-4 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={() => togglePasswordVisibility('password')}
+              aria-label={passwordVisibility.password ? "Hide password" : "Show password"}
+            >
+              {passwordVisibility.password ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
+          {errors.password ? (
+            <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">
+              Must be at least 8 characters with uppercase, lowercase letters, and numbers
+            </p>
+          )}
+        </div>
 
-          {/* New Password Field */}
-          <div>
-            <label htmlFor="newPassword" className="font-medium text-gray-600">New Password</label>
-            <div className="relative">
-              <input
-                type={passwordType}
-                id="newPassword"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                placeholder="Enter new password (min 8 characters)"
-                className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors pr-12 ${
-                  errors.newPassword 
-                    ? "border-red-500 focus:ring-red-200" 
-                    : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
-                }`}
-              />
-              <button
-                type="button"
-                className="absolute top-5 right-4  text-gray-400 hover:text-gray-600 transition-colors"
-                onClick={togglePasswordType}
-                aria-label={passwordType === "password" ? "Show password" : "Hide password"}
-              >
-                {passwordType === "password" ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            {errors.newPassword && <p className="text-red-500 text-sm">{errors.newPassword}</p>}
-          </div>
-
-          {/* Confirm Password Field */}
-          <div>
-            <label htmlFor="confirmPassword" className="font-medium text-gray-600">Confirm Password</label>
+        {/* Confirm Password Field */}
+        <div className="mb-6">
+          <label htmlFor="confirmPassword" className="block font-medium text-gray-600 mb-2">
+            Confirm Password
+          </label>
+          <div className="relative">
             <input
-              type="password"
+              type={passwordVisibility.confirmPassword ? "text" : "password"}
               id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Confirm your new password"
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              className={`w-full p-3 border rounded-lg pr-12 focus:outline-none focus:ring-2 transition-colors ${
                 errors.confirmPassword 
                   ? "border-red-500 focus:ring-red-200" 
                   : "border-gray-300 focus:ring-blue-200 focus:border-blue-500"
               }`}
             />
-            {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
+            <button
+              type="button"
+              className="absolute top-1/2 right-4 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={() => togglePasswordVisibility('confirmPassword')}
+              aria-label={passwordVisibility.confirmPassword ? "Hide password" : "Show password"}
+            >
+              {passwordVisibility.confirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
+          {errors.confirmPassword && (
+            <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+          )}
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className={`w-full mt-6 p-3 rounded-lg font-medium text-white transition-colors ${
+          className={`w-full p-3 rounded-lg font-medium text-white transition-colors ${
             isSubmitting 
               ? "bg-gray-400 cursor-not-allowed" 
               : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -214,7 +375,7 @@ const ResetPasswordForm: React.FC = () => {
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
               Resetting Password...
             </span>
           ) : (
@@ -224,7 +385,7 @@ const ResetPasswordForm: React.FC = () => {
       </form>
 
       <p className="mt-5 text-center text-gray-600">
-        Go Back? <NavLink className="text-blue-600" to="/login">Login</NavLink>
+        Go Back? <NavLink className="text-blue-600 hover:text-blue-800" to="/login">Login</NavLink>
       </p>
     </div>
   );

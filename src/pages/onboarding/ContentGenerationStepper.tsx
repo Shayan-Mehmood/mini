@@ -131,7 +131,7 @@ const ContentGenerationStepper = () => {
     },
     {
       id: "summary",
-      name: "Review Summary",
+      name: "Review and refine your course summary",
       description: "Review and edit the generated summary",
     },
     ...(isBookContent
@@ -617,13 +617,10 @@ const ContentGenerationStepper = () => {
     return <CreationOptions onMethodSelect={setCreationMethod} />;
   }
 
-
-
-
   // Original step-by-step wizard UI
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-6 mt-6 px-2">
+    <div className="max-w-6xl mx-auto ">
+      <div className="mb-6 px-2 pt-24">
        {renderTopStepsTimeline(steps,currentStep)}
       </div>
 
@@ -740,7 +737,7 @@ const ContentGenerationStepper = () => {
         
       </div>
 
-      <div className="absolute md:right-10 md:top-10 right-2 top-2 p-1 rounded-full bg-red-600 text-white cursor-pointer" onClick={()=>navigate('/dashboard')}>
+      <div className="hidden absolute md:right-10 md:top-10 right-2 top-2 p-1 rounded-full bg-red-600 text-white cursor-pointer" onClick={()=>navigate('/dashboard')}>
           <X  />
       </div>
     </div>

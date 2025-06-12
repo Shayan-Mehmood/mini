@@ -427,6 +427,26 @@ const AudioCreator: React.FC = () => {
     
   }, [chapterDetails, hasAudio]);
 
+  // Inside the component before the return statement, add this sorting function:
+
+// Sort chapters by index to ensure correct order
+useEffect(() => {
+  if (chapterDetails.length > 0 && titleSets.length > 0) {
+    // Create a copy of the arrays to sort
+    const sortedChapterDetails = [...chapterDetails];
+    const sortedTitleSets = [...titleSets];
+    const sortedGenerationStatus = [...generationStatus];
+    
+    // Sort all related arrays together based on chapter index
+    // This ensures chapter order is maintained consistently
+    setChapterDetails(sortedChapterDetails);
+    setTitleSets(sortedTitleSets);
+    setGenerationStatus(sortedGenerationStatus);
+  }
+}, [chapterDetails, titleSets, generationStatus]);
+
+
+
   const refreshExistingAudio = async () => {
     try {
       setFetchingExisting(true);
@@ -968,14 +988,14 @@ const previewVoice = () => {
   return (
     <div className="container mx-auto px-3 sm:px-6 max-w-5xl pb-16">
       {/* Header section - improved mobile layout */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 mt-3 mb-6">
-        <div>
-       <BackButton
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6  mb-6">
+        <div className="md:mt-40">
+       {/* <BackButton
        href=''
   onBeforeNavigate={() => true}
   label="Back to Editor"
-  className="text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1.5 text-sm font-medium transition-colors"
-/>
+  className="hidden text-gray-500 hover:text-gray-700 mb-4 items-center gap-1.5 text-sm font-medium transition-colors"
+/> */}
           <h1 className="mt-5 text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
            Professional Audio in Seconds
           </h1>
@@ -985,28 +1005,28 @@ const previewVoice = () => {
         </div>
 
         {/* Controls section - stacked on mobile, side by side on desktop */}
-        <div className="flex flex-col gap-3 w-full sm:w-auto">
+        <div className="flex flex-col gap-3 w-full sm:w-auto ">
           {/* Voice selection dropdown */}
-          <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto mt-8 flex items-center gap-5">
             <label
               htmlFor="voice-select"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-1 w-44"
             >
               Voice Style
             </label>
-            <select
-              id="voice-select"
-              value={selectedVoice}
-              onChange={(e) => setSelectedVoice(e.target.value)}
-              className="block w-full rounded-md border border-gray-200 shadow-sm py-2 px-3 text-sm bg-white focus:ring-1 focus:ring-primary/30 focus:border-primary"
-              disabled={isGenerating}
-            >
-              {voiceOptions.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name}
-                </option>
-              ))}
-            </select>
+           <select
+  id="voice-select"
+  value={selectedVoice}
+  onChange={(e) => setSelectedVoice(e.target.value)}
+  className="block w-full rounded-md border border-gray-200 shadow-sm py-2 px-3 text-sm bg-white focus:ring-1 focus:ring-primary/30 focus:border-primary text-gray-800" // Added text-gray-800 for better visibility
+  disabled={isGenerating}
+>
+  {voiceOptions.map((voice) => (
+    <option key={voice.id} value={voice.id} className="text-gray-800 font-medium">
+      {voice.name}
+    </option>
+  ))}
+</select>
             
             {/* Voice preview button */}
             <Button
@@ -1155,9 +1175,9 @@ const previewVoice = () => {
                       <Check className="h-3 w-3 text-green-600" />
                     </span>
                   )}
-                  <h2 className="font-semibold text-base sm:text-lg text-gray-800 line-clamp-1">
-                   {titleSets[index]}
-                  </h2>
+                <h2 className="font-semibold text-base sm:text-lg text-gray-800 line-clamp-1">
+  {titleSets[index] || `Chapter ${index + 1}`}
+</h2>
                 </div>
                 <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">
                   {chapter.content.length > 120

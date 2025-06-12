@@ -844,7 +844,7 @@ const handleCoverImageEdit = (editedImageUrl: string) => {
   };
 
 
-  const handleEnhanceText = async (selectedText: string, fullContent: string) => {
+  const handleEnhanceText = async (selectedText: string, fullContent: string, operation:any) => {
   try {
     // Show loading toast
     const loadingToast = toast.loading("Enhancing text with AI...");
@@ -854,7 +854,8 @@ const handleCoverImageEdit = (editedImageUrl: string) => {
       selectedText,
       fullContent,
       contentType: "book",
-      contentId: id
+      contentId: id,
+      operationName: operation
     });
     
     // Close loading toast
@@ -1681,15 +1682,15 @@ const handleCoverImageEdit = (editedImageUrl: string) => {
                     </span>
                   </Button>
                 )}
-              <Button
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 px-4 py-2.5"
-                onClick={() => handleSave(false)}
-                title="Save your content changes"
-              >
-                <Save className="w-4 h-4 text-primary" />
-                <span className="text-xs whitespace-nowrap">Save Content</span>
-              </Button>
+             <Button
+  size="sm"
+  className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 px-4 py-2.5"
+  onClick={() => handleSave(false)}
+  title="Save your content changes"
+>
+  <Save className="w-4 h-4 text-white" />
+  <span className="text-xs whitespace-nowrap">Save Content</span>
+</Button>
             </div>
           </div>
           <div className="hidden md:block">

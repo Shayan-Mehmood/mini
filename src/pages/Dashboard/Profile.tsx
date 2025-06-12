@@ -223,7 +223,7 @@ const Profile: React.FC = () => {
       <div className="absolute top-1/2 right-1/4 w-24 sm:w-36 h-24 sm:h-36 bg-blue-600 rounded-full opacity-5 sm:opacity-10 animate-blob animation-delay-1000"></div>
 
       <div className="flex flex-col relative z-10 max-w-4xl mx-auto">
-        <div className='flex justify-between mb-4'>
+        <div className=' justify-between mb-4 hidden'>
           <BackButton
             href=''
             onBeforeNavigate={() => true}
@@ -232,7 +232,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Header Section */}
-        <div className="text-center mb-8">
+        <div className="text-center my-4 ">
           <div className="inline-block px-4 py-2 bg-blue-100 text-blue-600 rounded-full text-sm font-medium mb-4">
             Account Settings
           </div>

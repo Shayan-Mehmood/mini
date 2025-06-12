@@ -24,7 +24,7 @@ const Dashboard = () => {
         
         <Tabs />
 
-        <div className="py-5 ">
+        <div className=" ">
             <CourseSpotlight />
         </div>
         </>

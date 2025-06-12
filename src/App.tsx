@@ -9,6 +9,7 @@ import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "react-hot-toast";
 import PublicLayout from "./layout/PublicLayout";
 import ResetPasswordForm from "./components/auth/ResetPasswordForm";
+import ForgotPasswordForm from "./components/auth/ForgotPasswordForm";
 import GoogleCallback from "./components/auth/GoogleCallback";
 import TermsAndPrivacypage from "./pages/TermsAndPrivacy";
 import DashboardLayout from "./layout/DashboardLayout";
@@ -50,8 +51,6 @@ function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
-
-
 
   // Check for token in URL on component mount or URL change
   // useEffect(() => {
@@ -145,164 +144,164 @@ function App() {
   };
 
   return (
-      <div className="App">
-        <Toaster position="bottom-center" reverseOrder={false} />
+    <div className="App">
+      <Toaster position="bottom-center" reverseOrder={false} />
 
-        {/* Token verification process */}
-        {isProcessingToken && (
-          <TokenHandler
-            token={token}
-            onSuccess={handleVerificationSuccess}
-            onError={handleVerificationError}
-          />
-        )}
+      {/* Token verification process */}
+      {isProcessingToken && (
+        <TokenHandler
+          token={token}
+          onSuccess={handleVerificationSuccess}
+          onError={handleVerificationError}
+        />
+      )}
 
-        {/* Regular app content */}
-        {!isProcessingToken && (
-          <Routes>
-            {/* Public Layout */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<Homepage />} />
-              <Route path="/faq" element={<Faqpage />} />
-              <Route path="/pricing" element={<Pricingpage />} />
-              <Route path="/contact-us" element={<ContactUsPage />} />
-              <Route path="/login" element={<Authpage />} />
-              <Route path="/sign-up" element={<SignUpPage />} />
-              <Route path="/reset-password" element={<ResetPasswordForm />} />
-              <Route path="/set-password/:userId" element={<SetPasswordForm />} />
-              <Route path="/auth/google/callback" element={<GoogleCallback />} />
-              <Route
-                path="/terms-and-privacy"
-                element={<TermsAndPrivacypage />}
-              />
-              <Route path="/shared/:type/:id" element={<SharedContent />} />  
-
-            </Route>
+      {/* Regular app content */}
+      {!isProcessingToken && (
+        <Routes>
+          {/* Public Layout */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Homepage />} />
+            <Route path="/faq" element={<Faqpage />} />
+            <Route path="/pricing" element={<Pricingpage />} />
+            <Route path="/contact-us" element={<ContactUsPage />} />
+            <Route path="/login" element={<Authpage />} />
+            <Route path="/sign-up" element={<SignUpPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+            <Route path="/reset-password" element={<ResetPasswordForm />} />
+            <Route path="/set-password/:userId" element={<SetPasswordForm />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            <Route
+              path="/terms-and-privacy"
+              element={<TermsAndPrivacypage />}
+            />
+            <Route path="/shared/:type/:id" element={<SharedContent />} />  
+          </Route>
           
-            {/* Dashboard Layout */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<DashboardLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
+          {/* Dashboard Layout */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/dashboard/knowledgebase"
+                element={<Knowledgebase />}
+              />
+              <Route
+                path="/dashboard/course-creator"
+                element={<CoursecreatorPage />}
+              />
+              <Route
+                path="/dashboard/course-creator/edit/:id"
+                element={<EditCoursePage />}
+              />
+              <Route
+                path="/dashboard/course-creator/add"
+                element={<AddCourseCreator />}
+              />
+              <Route
+                path="/dashboard/book-creator"
+                element={<BookcreatorPage />}
+              />
+              <Route
+                path="/dashboard/book-creator/edit/:id"
+                element={<EditBookCreator />}
+              />
+              <Route
+                path="/dashboard/book-creator/add"
+                element={<AddBookCreator />}
+              />
+              <Route path="/dashboard/ai-coach" element={<AiCoachPage />} />
+              <Route
+                path="/dashboard/easy-course-creator"
+                element={<EasyCourseCreator />}
+              />
+              <Route
+                path="/create-audio/:contentType/:id"
+                element={<AudioCreator />}
+              />
+              <Route
+                path="/create-email-campaign/:contentType/:id"
+                element={<EmailCampaign />}
+              />
+              <Route
+                path="/dashboard/marketing-resources"
+                element={<MarketingResources />}
+              />
                 <Route
-                  path="/dashboard/knowledgebase"
-                  element={<Knowledgebase />}
-                />
+                path="/dashboard/ai-tools"
+                element={<AICoach />}
+              />
                 <Route
-                  path="/dashboard/course-creator"
-                  element={<CoursecreatorPage />}
-                />
+                path="/dashboard/knowledgebase"
+                element={<Knowledgebase />}
+              />
                 <Route
-                  path="/dashboard/course-creator/edit/:id"
-                  element={<EditCoursePage />}
-                />
-                <Route
-                  path="/dashboard/course-creator/add"
-                  element={<AddCourseCreator />}
-                />
-                <Route
-                  path="/dashboard/book-creator"
-                  element={<BookcreatorPage />}
-                />
-                <Route
-                  path="/dashboard/book-creator/edit/:id"
-                  element={<EditBookCreator />}
-                />
-                <Route
-                  path="/dashboard/book-creator/add"
-                  element={<AddBookCreator />}
-                />
-                <Route path="/dashboard/ai-coach" element={<AiCoachPage />} />
-                <Route
-                  path="/dashboard/easy-course-creator"
-                  element={<EasyCourseCreator />}
-                />
-                <Route
-                  path="/create-audio/:contentType/:id"
-                  element={<AudioCreator />}
-                />
-                <Route
-                  path="/create-email-campaign/:contentType/:id"
-                  element={<EmailCampaign />}
-                />
-                <Route
-                  path="/dashboard/marketing-resources"
-                  element={<MarketingResources />}
-                />
-                  <Route
-                  path="/dashboard/ai-tools"
-                  element={<AICoach />}
-                />
-                  <Route
-                  path="/dashboard/knowledgebase"
-                  element={<Knowledgebase />}
-                />
-                  <Route
-                    path="/dashboard/profile"
-                    element={<Profile />}
-                />
-                <Route
-                  path="/dashboard/book-a-call"
-                  element={<BookACallPage />}
-                />
+                  path="/dashboard/profile"
+                  element={<Profile />}
+              />
+              <Route
+                path="/dashboard/book-a-call"
+                element={<BookACallPage />}
+              />
 
-               
-                <Route path="/onboard" element={<OnboardingFlow />} />
-                {/* @ts-ignore */}
-                <Route path="/create" element={<ContentGenerationStepper />} />
-                <Route
-                  path="/create/:contentType"
-                  // @ts-ignore
-                  element={<ContentGenerationStepper />}  
-                />
-                <Route path="/create/by-document" element={<DocumentUploadCreator />} />
-                <Route path="/create/one-click-creator" element={<QuickCourseCreator/>} />
-              </Route>
+             
+              <Route path="/onboard" element={<OnboardingFlow />} />
+              {/* @ts-ignore */}
+              <Route path="/create" element={<ContentGenerationStepper />} />
+              <Route
+                path="/create/:contentType"
+                // @ts-ignore
+                element={<ContentGenerationStepper />}  
+              />
+              <Route path="/create/by-document" element={<DocumentUploadCreator />} />
+              <Route path="/create/one-click-creator" element={<QuickCourseCreator/>} />
             </Route>
-           
-            {/* Other routes */}
-          </Routes>
-        )}
+          </Route>
+         
+          {/* Other routes */}
+        </Routes>
+      )}
 
-        {/* Error UI if token verification fails */}
-        {!isProcessingToken && error && (
-          <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl text-center">
-              <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-10 w-10"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                Token Authentication Error
-              </h2>
-              <p className="text-gray-600 mb-6">{error}</p>
-              <div className="flex flex-col space-y-3">
-                <button
-                  onClick={() => {
-                    setError(null);
-                    navigate("/");
-                  }}
-                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-colors"
-                >
-                  Go to Homepage
-                </button>
-              </div>
+      {/* Error UI if token verification fails */}
+      {!isProcessingToken && error && (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+          <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl text-center">
+            <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-10 w-10"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Token Authentication Error
+            </h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={() => {
+                  setError(null);
+                  navigate("/");
+                }}
+                className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-colors"
+              >
+                Go to Homepage
+              </button>
             </div>
           </div>
-        )}
-      </div>
-   
+        </div>
+      )}
+    </div>
+ 
   );
 }
 

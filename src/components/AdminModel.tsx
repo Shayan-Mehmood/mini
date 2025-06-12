@@ -25,7 +25,7 @@ const AdminModel = ({
       {/* Content Visibility Section - Simplified */}
       <div className="mb-3 pb-3 border-b border-gray-200">
         <h3 className="text-sm font-medium text-gray-700 mb-2">Content Visibility</h3>
-        <ContentVisibilityToggle 
+        <ContentVisibilityToggle
           contentId={contentId}
           contentType={contentType}
           initialIsPublic={initialIsPublic}

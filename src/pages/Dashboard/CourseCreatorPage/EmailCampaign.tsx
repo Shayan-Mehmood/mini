@@ -232,13 +232,13 @@ const EmailCampaign = () => {
         <Loader />
       ) : (
         <>
-          <div className="flex justify-between items-center">
-    <BackButton
-    onBeforeNavigate={() => true}
-    label="Go Back"
-    className="text-white"
-    href=""
-  />
+          <div className="flex justify-between items-center pt-24">
+              <BackButton
+              onBeforeNavigate={() => true}
+              label="Go Back"
+              className="text-white"
+              href=""
+            />
             <h2 className="text-2xl text-primary md:flex hidden">
               Manage Your Course's Email Marketing Campaign
             </h2>

@@ -148,6 +148,16 @@ const EditCoursePage = () => {
     }
   }, [id, isFirstView, generatedImage, loading, chapters, operationInProgress]);
 
+  useEffect(() => {
+  // Set gallery to visible by default when component mounts
+  // Small timeout to ensure it happens after initial rendering
+  const timer = setTimeout(() => {
+    toggleGallery()
+  }, 300);
+  
+  return () => clearTimeout(timer);
+}, []);
+
   // Silent version of handleAddCoverImage without toasts for automatic generation
   const handleAddCoverImageSilently = async (imageUrl: string) => {
     setImageGallery(false);
@@ -1349,7 +1359,7 @@ const EditCoursePage = () => {
     // Stay on the page
   };
 
-  const handleEnhanceText = async (selectedText: string, fullContent: string) => {
+  const handleEnhanceText = async (selectedText: string, fullContent: string, operation:any) => {
     try {
       // Show loading toast
       const loadingToast = toast.loading("Enhancing text with AI...");
@@ -1359,7 +1369,8 @@ const EditCoursePage = () => {
         selectedText,
         fullContent,
         contentType: "course",
-        contentId: id
+        contentId: id,
+        operationName: operation,
       });
 
       // Close loading toast
@@ -1521,7 +1532,16 @@ const EditCoursePage = () => {
   {/* In your main content area, where the RichTextEditor is rendered */}
   {isCurrentChapterCover() ? (
     <div className="flex-1">
-      
+      {/* <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+        <h3 className="text-lg font-semibold text-purple-800 mb-2 flex items-center">
+          <Image className="w-5 h-5 mr-2" />
+          Cover Image Editor
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Edit your cover image directly. Changes will be saved automatically.
+        </p>
+      </div>
+       */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <ImageEditor
           initialImageUrl={extractCoverImageUrl(selectedChapter)}
@@ -1592,7 +1612,7 @@ const EditCoursePage = () => {
       {/* Main container with responsive layout changes */}
       <div className="flex flex-col p-2 md:p-4 gap-4 lg:gap-6 max-w-full overflow-hidden">
         {/* Mobile sticky header with essential actions */}
-        <div className="md:hidden sticky top-0 z-20 bg-white py-2 px-3 border-b border-purple-100 shadow-sm flex flex-col-reverse gap-4 justify-between">
+        <div className="md:hidden sticky top-0 z-20 bg-white mt-24 py-2 px-3 border-b border-purple-100 shadow-sm flex flex-col-reverse gap-4 justify-between">
           <div className="flex items-center justify-center">
             {courseData?.course_title ? (
               <h1 className="text-lg max-w-[200px] text-center text-gray-800  mx-2 flex-1 ">
@@ -1612,7 +1632,7 @@ const EditCoursePage = () => {
                 return true;
               }}
               label="Back"
-              className="flex-shrink-0"
+              className="flex-shrink-0 hidden"
               href="/dashboard"
             />
             <Button
@@ -1627,9 +1647,8 @@ const EditCoursePage = () => {
           </div>
         </div>
         {/* Desktop header with all tools */}
-        <div className="hidden md:flex flex-col gap-2 sm:gap-0">
-          <div className="flex justify-between">
-            <BackButton
+        <div className="hidden md:flex flex-col gap-2 sm:gap-0 mt-24">
+            {/* <BackButton
               onBeforeNavigate={async () => {
                 const confirmed = window.confirm(
                   "Are you sure you want to go back to the dashboard?"
@@ -1638,8 +1657,9 @@ const EditCoursePage = () => {
               }}
               label="Back to Dashboard"
               href="/dashboard"
-            />
-            <div className="flex flex-wrap justify-between gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+              className="hidden"
+            /> */}
+            <div className="flex flex-wrap justify-evenly gap-2 w-full sm:w-auto mt-2 sm:mt-0">
               <Button
                 variant="soft"
                 size="sm"
@@ -1745,24 +1765,23 @@ const EditCoursePage = () => {
                     </span>
                   </Button>
                 )}
-              <Button
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 px-4 py-2.5"
-                onClick={() => handleSave(false)}
-                title="Save your content changes"
-              >
-                <Save className="w-4 h-4 text-primary" />
-                <span className="text-xs whitespace-nowrap">Save Content</span>
-              </Button>
+            <Button
+  size="sm"
+  className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 px-4 py-2.5"
+  onClick={() => handleSave(false)}
+  title="Save your content changes"
+>
+  <Save className="w-4 h-4 text-white" />
+  <span className="text-xs whitespace-nowrap">Save Content</span>
+</Button>
             </div>
-          </div>
         </div>
         <div className="hidden md:block">
           <AutoCoverIndicator />
         </div>
 
         {/* Mobile toolbar with additional actions - appears below the editor */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white p-2 border-t border-purple-100 shadow-lg flex flex-wrap justify-around">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mt-24 bg-white p-2 border-t border-purple-100 shadow-lg flex flex-wrap justify-around">
           <div className="flex flex-col items-center justify-center px-2 py-1.5">
             <Button
               variant="ghost"
@@ -1993,8 +2012,6 @@ const EditCoursePage = () => {
     />
   </div>
 )}
-
-
               {/* Quiz display area */}
               {chapterQuiz && chapterQuiz.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
@@ -2098,19 +2115,16 @@ const EditCoursePage = () => {
         />
       </Modal>
 
-      
-
-
-<Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Content Sharing & Embedding">
-  <AdminModel
-    iframeLink={`<iframe src="https://app.minilessonsacademy.com/shared/course/${id}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`}
-    preview={`/shared/course/${id}`}
-    onSave={embedContent}
-    contentId={id || ""}
-    contentType="course"
-    initialIsPublic={courseData?.is_shared || false}
-  />
-</Modal>
+      <Modal isOpen={OpenAdminModal} onClose={toggleAdminModel} title="Content Sharing & Embedding">
+        <AdminModel
+          iframeLink={`<iframe src="https://app.minilessonsacademy.com/shared/course/${id}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`}
+          preview={`/shared/course/${id}`}
+          onSave={embedContent}
+          contentId={id || ""}
+          contentType="course"
+          initialIsPublic={courseData?.is_shared || false}
+        />
+      </Modal>
 
       <AlertDialog
         isOpen={showLeaveConfirmation}

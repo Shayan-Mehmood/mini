@@ -165,22 +165,24 @@ const LoginForm : React.FC = () => {
              </div>
            </div>
 
-      <div className="flex justify-between items-center">
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center mt-4">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              name="rememberMe"
-              className="mr-2"
-            />
-            <label htmlFor="rememberMe" className="text-gray-600">Remember Me</label>
-          </div>
-
-          {/* Forgot Password */}
-          <NavLink to="/reset-password" className="text-blue-600 mt-4">Forgot Password?</NavLink>
-
-      </div>
+      <div className="flex justify-between items-center mb-5">
+  <div className="flex items-center mt-4">
+    <input
+      type="checkbox"
+      id="remember"
+      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+    />
+    <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
+      Remember me
+    </label>
+  </div>
+  <NavLink
+    to="/forgot-password"
+    className="text-sm mt-4 text-blue-600 hover:text-blue-800"
+  >
+    Forgot your password?
+  </NavLink>
+</div>
            {/* Submit Button */}
            <button
              type="submit"

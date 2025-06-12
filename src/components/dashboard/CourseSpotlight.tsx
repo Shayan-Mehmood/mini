@@ -271,16 +271,18 @@ const CourseSpotlight: React.FC = () => {
 
           {/* Creator */}
           <div>
-            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-2">
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-2 relative inline-block">
               {item.type === 'Course' ? 'Creator' : 'Author'}
+              <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-blue-600 rounded-full"></div>
             </h4>
             <p className="text-gray-600 text-lg">{item.creator}</p>
           </div>
 
           {/* What's Inside */}
           <div>
-            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4">
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4 relative inline-block">
               What's inside the {item.type.toLowerCase()}
+              <div className="absolute -bottom-1 left-0 w-10 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
             </h4>
             <div className="space-y-3">
               {item.whatsInside.map((point, index) => (
@@ -293,8 +295,9 @@ const CourseSpotlight: React.FC = () => {
 
           {/* Why We Love */}
           <div>
-            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4">
+            <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-4 relative inline-block">
               Why we love this {item.type.toLowerCase()}
+              <div className="absolute -bottom-1 left-0 w-12 h-0.5 bg-gradient-to-r from-orange-500 to-purple-600 rounded-full"></div>
             </h4>
             <div className="space-y-3">
               {item.whyWeLove.map((point, index) => (
@@ -321,12 +324,14 @@ const CourseSpotlight: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
         <div className="text-center mb-8 lg:mb-16">
-          <h2 className="text-4xl lg:text-6xl font-bold text-gray-800 mb-4">
+          <h2 className="text-4xl lg:text-6xl font-bold text-gray-800 mb-4 relative inline-block">
             Content Spotlight
+            {/* <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full"></div> */}
           </h2>
-          <p className="text-xl lg:text-2xl text-gray-600">
+          {/* <p className="text-xl lg:text-2xl text-gray-600 relative inline-block mt-4">
             This Months Spotlighted Content
-          </p>
+            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-purple-400 rounded-full"></div>
+          </p> */}
         </div>
 
         {/* Main Spotlight Container with Side Navigation */}

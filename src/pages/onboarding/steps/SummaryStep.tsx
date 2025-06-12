@@ -20,9 +20,11 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
   const [sections, setSections] = useState<SummarySection[]>([]);
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [rawTextContent, setRawTextContent] = useState<{[key: number]: string}>({});
   const summaryContentRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
 
+  // Parse summary when it changes
   useEffect(() => {
     if (summary) {
       try {
@@ -30,38 +32,96 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
         const cleanHtml = summary.replace(/```html|```/g, '').trim();
         setParsedSummary(cleanHtml);
         
-        // Extract sections from HTML (simple approach)
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = cleanHtml;
+        // Extract sections from HTML
+        const extractedSections = extractSectionsFromHTML(cleanHtml);
         
-        const sectionElements = tempDiv.querySelectorAll('.summary-section');
-        const extractedSections: SummarySection[] = [];
-        
-        sectionElements.forEach(section => {
-          const titleEl = section.querySelector('h2');
-          const title = titleEl ? titleEl.textContent || '' : '';
-          
-          // Get all content except the h2
-          let content = '';
-          section.childNodes.forEach((node:any) => {
-            if (node.nodeName !== 'H2') {
-              content += node.outerHTML || '';
-            }
-          });
-          
-          extractedSections.push({ title, content });
-        });
-        
-        setSections(extractedSections.length > 0 ? extractedSections : [
+        // Use extracted sections or default if none found
+        const finalSections = extractedSections.length > 0 ? extractedSections : [
           { title: 'Introduction', content: '<p>Add your introduction here.</p>' },
           { title: 'Main Content', content: '<p>Describe your main content here.</p>' },
           { title: 'Conclusion', content: '<p>Add your conclusion here.</p>' }
-        ]);
+        ];
+        
+        setSections(finalSections);
+        
+        // Initialize the raw text content for each section
+        const initialRawContent: {[key: number]: string} = {};
+        finalSections.forEach((section, index) => {
+          initialRawContent[index] = convertHtmlToEditableText(section.content);
+        });
+        setRawTextContent(initialRawContent);
       } catch (error) {
         console.error("Error parsing summary HTML:", error);
+        // Set default sections if parsing fails
+        const defaultSections = [
+          { title: 'Introduction', content: '<p>Add your introduction here.</p>' },
+          { title: 'Main Content', content: '<p>Describe your main content here.</p>' },
+          { title: 'Conclusion', content: '<p>Add your conclusion here.</p>' }
+        ];
+        setSections(defaultSections);
+        
+        // Initialize raw content for default sections
+        const defaultRawContent: {[key: number]: string} = {};
+        defaultSections.forEach((section, index) => {
+          defaultRawContent[index] = convertHtmlToEditableText(section.content);
+        });
+        setRawTextContent(defaultRawContent);
       }
     }
   }, [summary]);
+
+  // Extract sections from HTML helper
+  const extractSectionsFromHTML = (html: string): SummarySection[] => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    const sectionElements = tempDiv.querySelectorAll('.summary-section');
+    const extractedSections: SummarySection[] = [];
+    
+    if (sectionElements.length > 0) {
+      sectionElements.forEach(section => {
+        const titleEl = section.querySelector('h2');
+        const title = titleEl ? titleEl.textContent || '' : '';
+        
+        // Get all content except the h2
+        let content = '';
+        section.childNodes.forEach((node: any) => {
+          if (node.nodeName !== 'H2') {
+            content += node.outerHTML || '';
+          }
+        });
+        
+        extractedSections.push({ title, content });
+      });
+    } else {
+      // Try to extract content from regular HTML structure if no specific sections found
+      const h2Elements = tempDiv.querySelectorAll('h2');
+      
+      if (h2Elements.length > 0) {
+        h2Elements.forEach((h2, index) => {
+          const title = h2.textContent || '';
+          let content = '';
+          
+          // Get content until next h2 or end
+          let currentNode = h2.nextSibling as any;
+          while (currentNode && (currentNode.nodeName !== 'H2')) {
+            content += currentNode.outerHTML || '';
+            currentNode = currentNode.nextSibling;
+          }
+          
+          extractedSections.push({ title, content });
+        });
+      } else {
+        // If no structure found, create a single section with all content
+        extractedSections.push({ 
+          title: 'Summary', 
+          content: tempDiv.innerHTML 
+        });
+      }
+    }
+    
+    return extractedSections;
+  };
 
   // Click outside handler for download menu
   useEffect(() => {
@@ -88,26 +148,45 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
   };
 
   const handleSave = () => {
-    // Rebuild the HTML from our sections
-    const updatedHtml = `
-    <div class="summary-container">
-      ${sections.map(section => `
-        <div class="summary-section">
-          <h2>${section.title}</h2>
-          ${section.content}
-        </div>
-      `).join('')}
-    </div>`;
-    
-    onUpdate(updatedHtml);
-    setIsEditing(false);
+    try {
+      // Rebuild the HTML from our sections
+      const updatedHtml = `
+      <div class="summary-container">
+        ${sections.map(section => `
+          <div class="summary-section">
+            <h2>${section.title}</h2>
+            ${section.content}
+          </div>
+        `).join('')}
+      </div>`;
+      
+      // Update the parsed summary for display
+      setParsedSummary(updatedHtml);
+      
+      // Call the parent's update function
+      onUpdate(updatedHtml);
+      
+      // Exit edit mode
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving summary:', error);
+      // Stay in edit mode if save fails
+    }
   };
 
   const handleCancel = () => {
+    // Reset raw text content based on current sections
+    const resetRawContent: {[key: number]: string} = {};
+    sections.forEach((section, index) => {
+      resetRawContent[index] = convertHtmlToEditableText(section.content);
+    });
+    setRawTextContent(resetRawContent);
+    
+    // Exit edit mode
     setIsEditing(false);
   };
 
-  // Download as PDF using jsPDF with text-only rendering (no images)
+  // Download as PDF using jsPDF with text-only rendering
   const downloadAsPDF = async () => {
     try {
       setIsDownloading(true);
@@ -127,6 +206,12 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
       doc.setTextColor(0, 0, 0); // Black text
       
       let y = margin; // Starting y position
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Summary", margin, y);
+      y += 15;
       
       // For each section
       sections.forEach(section => {
@@ -185,29 +270,11 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
     }
   };
 
-  // Download as Word (docx) - maintains current implementation but ensures no images
+  // Download as Word (docx)
   const downloadAsWord = async () => {
     try {
       setIsDownloading(true);
       setShowDownloadOptions(false);
-      
-      // Parse sections for Word export
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = parsedSummary;
-      const sectionElements = tempDiv.querySelectorAll('.summary-section');
-      const docSections: SummarySection[] = [];
-      
-      sectionElements.forEach(section => {
-        const titleEl = section.querySelector('h2');
-        const title = titleEl ? titleEl.textContent || '' : '';
-        let content = '';
-        section.childNodes.forEach((node:any) => {
-          if (node.nodeName !== 'H2') {
-            content += node.outerHTML || '';
-          }
-        });
-        docSections.push({ title, content });
-      });
       
       // Build docx document
       const doc = new Document({
@@ -218,7 +285,7 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
                 margin: { top: 720, right: 720, bottom: 720, left: 720 },
               },
             },
-            children: docSections?.map(section => [
+            children: sections.map(section => [
               new Paragraph({
                 children: [
                   new TextRun({
@@ -261,6 +328,200 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  // Improved convertHtmlToEditableText function
+  const convertHtmlToEditableText = (html: string) => {
+    if (!html) return '';
+    
+    // Create a temporary element to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Process the content
+    let result = '';
+    
+    // Handle direct child nodes first
+    Array.from(tempDiv.childNodes).forEach((node: any) => {
+      // Handle different node types
+      if (node.nodeType === Node.TEXT_NODE) {
+        // Text node
+        if (node.textContent.trim()) {
+          result += node.textContent.trim() + '\n\n';
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // Element node
+        if (node.nodeName === 'P') {
+          result += node.textContent + '\n\n';
+        } else if (node.nodeName === 'UL') {
+          Array.from(node.querySelectorAll('li')).forEach((item: any) => {
+            result += '* ' + item.textContent + '\n';
+          });
+          result += '\n';
+        } else if (node.nodeName === 'OL') {
+          Array.from(node.querySelectorAll('li')).forEach((item: any, index: number) => {
+            result += (index + 1) + '. ' + item.textContent + '\n';
+          });
+          result += '\n';
+        } else if (node.nodeName === 'DIV' || node.nodeName === 'SECTION') {
+          // For container elements, process their children recursively
+          Array.from(node.childNodes).forEach((childNode: any) => {
+            if (childNode.nodeType === Node.ELEMENT_NODE) {
+              if (childNode.nodeName === 'P') {
+                result += childNode.textContent + '\n\n';
+              } else if (childNode.nodeName === 'UL') {
+                Array.from(childNode.querySelectorAll('li')).forEach((item: any) => {
+                  result += '* ' + item.textContent + '\n';
+                });
+                result += '\n';
+              } else if (childNode.nodeName === 'OL') {
+                Array.from(childNode.querySelectorAll('li')).forEach((item: any, index: number) => {
+                  result += (index + 1) + '. ' + item.textContent + '\n';
+                });
+                result += '\n';
+              } else if (childNode.textContent.trim()) {
+                result += childNode.textContent.trim() + '\n\n';
+              }
+            } else if (childNode.nodeType === Node.TEXT_NODE && childNode.textContent.trim()) {
+              result += childNode.textContent.trim() + '\n\n';
+            }
+          });
+        } else if (node.textContent.trim()) {
+          result += node.textContent.trim() + '\n\n';
+        }
+      }
+    });
+    
+    return result.trim();
+  };
+
+  // Improved convertTextToHtml function that properly handles lists
+  const convertTextToHtml = (text: string) => {
+    if (!text) return '<p></p>';
+    
+    // Split the text into lines
+    const lines = text.split('\n');
+    let html = '';
+    let inList = false;
+    let listType = '';
+    let paragraphText = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      // Handle empty lines
+      if (!trimmedLine) {
+        // If we were building a paragraph, close it
+        if (paragraphText) {
+          html += `<p>${paragraphText}</p>`;
+          paragraphText = '';
+        }
+        
+        // Close any open list
+        if (inList) {
+          html += listType === 'ul' ? '</ul>' : '</ol>';
+          inList = false;
+        }
+        
+        continue;
+      }
+      
+      // Check for bullet points
+      if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
+        // If we were building a paragraph, close it first
+        if (paragraphText) {
+          html += `<p>${paragraphText}</p>`;
+          paragraphText = '';
+        }
+        
+        const content = trimmedLine.substring(2);
+        
+        // Start a new list if not already in one
+        if (!inList || listType !== 'ul') {
+          if (inList) {
+            html += listType === 'ul' ? '</ul>' : '</ol>';
+          }
+          html += '<ul>';
+          listType = 'ul';
+          inList = true;
+        }
+        
+        html += `<li>${content}</li>`;
+      }
+      // Check for numbered lists
+      else if (/^\d+\.\s/.test(trimmedLine)) {
+        // If we were building a paragraph, close it first
+        if (paragraphText) {
+          html += `<p>${paragraphText}</p>`;
+          paragraphText = '';
+        }
+        
+        const content = trimmedLine.replace(/^\d+\.\s/, '');
+        
+        // Start a new list if not already in one
+        if (!inList || listType !== 'ol') {
+          if (inList) {
+            html += listType === 'ul' ? '</ul>' : '</ol>';
+          }
+          html += '<ol>';
+          listType = 'ol';
+          inList = true;
+        }
+        
+        html += `<li>${content}</li>`;
+      }
+      // Regular text
+      else {
+        // Close any open list
+        if (inList) {
+          html += listType === 'ul' ? '</ul>' : '</ol>';
+          inList = false;
+        }
+        
+        // Either add to existing paragraph or start a new one
+        if (paragraphText) {
+          paragraphText += ' ' + trimmedLine;
+        } else {
+          paragraphText = trimmedLine;
+        }
+        
+        // If this is the last line or the next line is empty,
+        // or the next line is a list item, close the paragraph
+        if (i === lines.length - 1 || 
+            !lines[i+1].trim() || 
+            lines[i+1].trim().startsWith('* ') || 
+            lines[i+1].trim().startsWith('- ') || 
+            /^\d+\.\s/.test(lines[i+1].trim())) {
+          html += `<p>${paragraphText}</p>`;
+          paragraphText = '';
+        }
+      }
+    }
+    
+    // Close any remaining paragraph
+    if (paragraphText) {
+      html += `<p>${paragraphText}</p>`;
+    }
+    
+    // Close any open list at the end
+    if (inList) {
+      html += listType === 'ul' ? '</ul>' : '</ol>';
+    }
+    
+    return html || '<p></p>';
+  };
+
+  // Handle text change in edit mode
+  const handleTextChange = (index: number, text: string) => {
+    // Update the raw text content
+    const newRawContent = {...rawTextContent};
+    newRawContent[index] = text;
+    setRawTextContent(newRawContent);
+    
+    // Convert to HTML and update section content
+    const formattedContent = convertTextToHtml(text);
+    handleSectionUpdate(index, 'content', formattedContent);
   };
 
   if (!summary) {
@@ -344,7 +605,7 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
       {/* Summary content */}
       {isEditing ? (
         <div className="space-y-6">
-          {sections.map((section, index) => (
+          {sections?.map((section, index) => (
             <div key={index} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-900 mb-2">Section Title</label>
@@ -359,23 +620,37 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Section Content</label>
                 <textarea
-                  rows={5}
+                  rows={8}
                   className="w-full px-3 py-2 border text-gray-700 border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500"
-                  value={section.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')}
-                  onChange={(e) => {
-                    // Wrap content in paragraph tags for simple formatting
-                    const formattedContent = `<p>${e.target.value.replace(/\n\n/g, '</p><p>')}</p>`;
-                    handleSectionUpdate(index, 'content', formattedContent);
-                  }}
+                  value={rawTextContent[index] || convertHtmlToEditableText(section.content)}
+                  onChange={(e) => handleTextChange(index, e.target.value)}
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Enter plain text content. Use double line breaks to create new paragraphs.
+                  Enter text content. Use asterisks (*) at start of line for bullet points. Use numbers followed by period (1.) for numbered lists.
                 </p>
               </div>
             </div>
           ))}
           
-          <div className="flex py-6 justify-end">
+          {/* Add section button */}
+          <div className="flex justify-between py-4">
+            <button
+              onClick={() => {
+                // Add a new empty section
+                setSections([...sections, { title: 'New Section', content: '<p>Add content here.</p>' }]);
+                
+                // Add raw text for the new section
+                const newIndex = sections.length;
+                setRawTextContent({
+                  ...rawTextContent,
+                  [newIndex]: 'Add content here.'
+                });
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 rounded-md border border-purple-200 hover:bg-purple-100 transition-colors"
+            >
+              + Add Section
+            </button>
+            
             <button 
               onClick={handleSave}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm transition-colors hover:bg-green-700"
@@ -386,13 +661,13 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
           </div>
         </div>
       ) : (
-        <div className="bg-white overflow-hidden">
+        <div className="bg-white border border-gray-100 shadow-sm rounded-lg overflow-hidden">
           <div 
             ref={summaryContentRef}
             className="prose prose-purple max-w-none p-6 summary-content"
             dangerouslySetInnerHTML={{ __html: parsedSummary }}
           />
-          <div className="flex justify-end py-4">
+          <div className="flex justify-end p-4 border-t border-gray-100">
             <button 
               onClick={() => setIsEditing(true)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-tr from-purple-600 to-purple-700 rounded-md shadow-sm transition-colors"
@@ -420,6 +695,7 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
         .summary-content p, .summary-content li {
           margin-bottom: 0.75rem;
           line-height: 1.7;
+          color: #374151; /* Make sure text appears black, not gray */
         }
         .summary-content ul, .summary-content ol {
           padding-left: 1.5rem;

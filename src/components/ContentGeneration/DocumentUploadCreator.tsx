@@ -20,13 +20,13 @@ const DocumentUploadCreator = () => {
     },
     {
       id: "upload",
-      name: "Upload your Document ",
+      name: "📤 Upload Your Document ",
       description:
-        "Upload the content of which you want to make the course or book",
+        "Upload your document, and we'll instantly transform it into a polished course",
     },
     {
       id: "summary",
-      name: "Review Summary",
+      name: "Review and refine your course summary",
       description: "Review and edit the generated summary",
     },
     {
@@ -35,8 +35,6 @@ const DocumentUploadCreator = () => {
       description: "Read your content by chapters and save",
     },
   ];
-
-  
 
   const handleStepChange = (step:any) => {
     setCurrentStep(step);
@@ -81,7 +79,7 @@ const DocumentUploadCreator = () => {
         </div>
 
         {/* Timeline */}
-        <div className="mb-8 px-2">
+        <div className="mb-8 px-2 pt-8">
           <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 flex justify-center">
             {renderTopStepsTimeline(steps, currentStep)}
           </div>
@@ -210,7 +208,7 @@ export const ContentTypeCard = ({setCurrentStep}:any) => {
                               <div className={`w-2 h-2 rounded-full ${
                                 isActive ? 'bg-blue-500' : 'bg-gray-400'
                               }`}></div>
-                              <span className="text-sm text-gray-700">{benefit}</span>
+                              <span className="text-base text-gray-700">{benefit}</span>
                             </div>
                           ))}
                         </div>

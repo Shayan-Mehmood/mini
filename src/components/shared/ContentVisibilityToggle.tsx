@@ -51,8 +51,7 @@ const ContentVisibilityToggle: React.FC<ContentVisibilityToggleProps> = ({
     try {
       const newStatus = !isPublic;
 // Line 52
-// const userIdString = localStorage.getItem('userId');
-// const userId = userIdString ? JSON.parse(userIdString) : null;
+
       const response = await apiService.put(`/shared/toggle-visibility/${contentId}/${contentType}`, {
         isPublic: newStatus,
         userId: getUserId() 

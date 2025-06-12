@@ -435,22 +435,21 @@ const ChapterGallery: React.FC<ChapterGalleryProps> = ({
     )}
 
     {/* Modal comes here */}
-    <Modal
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-      title="Add Chapter"
-    >
-      <p>Kindly enter the chapter title you want to add</p>
-      <input
-        type="text"
-        value={newChapterTitle}
-        onChange={(e) => setNewChapterTitle(e.target.value)}
-        className="w-full p-2 border border-gray-300 rounded mb-4"
-        placeholder="Enter chapter title"
-      />
-      <button onClick={handleAddChapter} className="px-4 py-2 bg-purple-600 text-white rounded">Add Chapter</button>
-      
-    </Modal>
+   <Modal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  title="Add Chapter"
+>
+  <p>Please enter the name of your new chapter.</p>
+  <input
+    type="text"
+    value={newChapterTitle}
+    onChange={(e) => setNewChapterTitle(e.target.value)}
+    className="w-full p-2 border border-gray-300 rounded mb-4"
+    placeholder="Enter chapter title"
+  />
+  <button onClick={handleAddChapter} className="px-4 py-2 bg-purple-600 text-white rounded">Add Chapter</button>
+</Modal>
     </>
   );
 };

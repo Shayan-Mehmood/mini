@@ -338,6 +338,36 @@ const EditorStyles: React.FC = () => {
           height: 16px !important;
         }
       }
+
+      /* Force text color to be black */
+      .ql-editor p, .ql-editor h1, .ql-editor h2, .ql-editor h3, 
+      .ql-editor h4, .ql-editor h5, .ql-editor h6, .ql-editor span, 
+      .ql-editor strong, .ql-editor em, .ql-editor ul, .ql-editor ol, 
+      .ql-editor li {
+        color: #000 !important;
+      }
+      
+      /* Ensure headings stand out with proper styling while maintaining black color */
+      .ql-editor h1 {
+        font-size: 2em !important;
+        font-weight: bold !important;
+        margin-top: 1em !important;
+        margin-bottom: 0.5em !important;
+      }
+      
+      .ql-editor h2 {
+        font-size: 1.5em !important;
+        font-weight: bold !important;
+        margin-top: 1em !important;
+        margin-bottom: 0.5em !important;
+      }
+      
+      .ql-editor h3 {
+        font-size: 1.17em !important;
+        font-weight: bold !important;
+        margin-top: 1em !important;
+        margin-bottom: 0.5em !important;
+      }
       `}
     </style>
   );

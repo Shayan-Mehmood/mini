@@ -8,7 +8,7 @@ import ErrorState from './states/ErrorState';
 import QuizInteractivity from './interactivity/QuizInteractivity';
 import FlashCards from './interactivity/FlashCards';
 import ShortAnswerQuestions from './interactivity/ShortAnswerQuestions';
-
+import BackToTopButton from '../ui/BackToTopButton';
 interface SharedContentProps {}
 
 const SharedContent: React.FC<SharedContentProps> = () => {
@@ -105,9 +105,12 @@ const SharedContent: React.FC<SharedContentProps> = () => {
 
   // Render the content directly into the DOM
   return (
+    <>
+    <BackToTopButton />
     <div className="shared-content-wrapper">
       <div dangerouslySetInnerHTML={{ __html: content }} />
     </div>
+    </>
   );
 };
 
