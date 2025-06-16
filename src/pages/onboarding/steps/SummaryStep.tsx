@@ -26,10 +26,33 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
 
   // Parse summary when it changes
   useEffect(() => {
-    if (summary) {
+    configuringSummaries(summary);
+  }, [summary]);
+
+  // Click outside handler for download menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showDownloadOptions &&
+        downloadMenuRef.current &&
+        !downloadMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowDownloadOptions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDownloadOptions]);
+
+
+  const configuringSummaries =  (fetchedSummary:any) =>{
+     if (fetchedSummary) {
       try {
         // Clean the HTML string
-        const cleanHtml = summary.replace(/```html|```/g, '').trim();
+        const cleanHtml = fetchedSummary.replace(/```html|```/g, '').trim();
         setParsedSummary(cleanHtml);
         
         // Extract sections from HTML
@@ -537,7 +560,7 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
       {/* Header with edit and download buttons */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800"></h3>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           {!isEditing && (
             <div className="relative">
               <button 
