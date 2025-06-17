@@ -48,27 +48,27 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
   }, [showDownloadOptions]);
 
 
-  const configuringSummaries =  (fetchedSummary:any) =>{
-     if (fetchedSummary) {
+  const configuringSummaries = (fetchedSummary: string) => {
+    if (fetchedSummary) {
       try {
         // Clean the HTML string
         const cleanHtml = fetchedSummary.replace(/```html|```/g, '').trim();
         setParsedSummary(cleanHtml);
-        
+
         // Extract sections from HTML
         const extractedSections = extractSectionsFromHTML(cleanHtml);
-        
+
         // Use extracted sections or default if none found
         const finalSections = extractedSections.length > 0 ? extractedSections : [
           { title: 'Introduction', content: '<p>Add your introduction here.</p>' },
           { title: 'Main Content', content: '<p>Describe your main content here.</p>' },
           { title: 'Conclusion', content: '<p>Add your conclusion here.</p>' }
         ];
-        
+
         setSections(finalSections);
-        
+
         // Initialize the raw text content for each section
-        const initialRawContent: {[key: number]: string} = {};
+        const initialRawContent: { [key: number]: string } = {};
         finalSections.forEach((section, index) => {
           initialRawContent[index] = convertHtmlToEditableText(section.content);
         });
@@ -82,16 +82,16 @@ const SummaryStep: React.FC<SummaryStepProps> = ({ summary, onUpdate }) => {
           { title: 'Conclusion', content: '<p>Add your conclusion here.</p>' }
         ];
         setSections(defaultSections);
-        
+
         // Initialize raw content for default sections
-        const defaultRawContent: {[key: number]: string} = {};
+        const defaultRawContent: { [key: number]: string } = {};
         defaultSections.forEach((section, index) => {
           defaultRawContent[index] = convertHtmlToEditableText(section.content);
         });
         setRawTextContent(defaultRawContent);
       }
     }
-  }, [summary]);
+  };
 
   // Extract sections from HTML helper
   const extractSectionsFromHTML = (html: string): SummarySection[] => {

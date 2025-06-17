@@ -279,7 +279,7 @@ const ContentTypeCard = ({
                           ? `bg-gradient-to-r ${type.gradient}`
                           : "bg-gray-200"
                       }`}
-                    ></div>
+                    />
                   </div>
                 </div>
               );
